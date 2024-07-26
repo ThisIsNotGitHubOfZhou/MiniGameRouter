@@ -78,7 +78,7 @@ func encodeGRPCRegisterRequest(_ context.Context, request interface{}) (interfac
 	return req, nil
 }
 func decodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(*registerpb.RegisterRequest)
+	resp := response.(*registerpb.RegisterResponse)
 	return resp, nil
 }
 
