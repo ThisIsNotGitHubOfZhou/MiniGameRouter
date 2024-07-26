@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package register;
+
+option go_package = "registersvr/register";
+
+service RegisterService {
+  rpc Register (RegisterRequest) returns (RegisterResponse) {}
+  rpc DeRegister (DeRegisterRequest) returns (DeRegisterResponse) {}
+}
+
+message RegisterRequest {
+  string name = 1;// 服务名称
+  string host = 2; // 服务Host
+  string port = 3; // 服务Port
+  string protocol = 4; // 协议
+  string metadata = 5; // 元数据键值对
+  int64 weight = 6; // 权重
+  int64 timout = 7; // 过期时长
+
+}
+
+message RegisterResponse {
+  string id = 1; // 服务实例ID
+  string error_mes = 2; // 失败原因
+}
+
+
+message DeRegisterRequest{
+  string id = 1; // 服务实例ID
+  string name = 2; // 服务名
+  string host = 3; // 服务Host
+  string port = 4; // 服务Port
+}
+
+message DeRegisterResponse{
+  string error_mes = 1; // 失败原因
+}

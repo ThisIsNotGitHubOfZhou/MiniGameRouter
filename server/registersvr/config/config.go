@@ -1,0 +1,67 @@
+package config
+
+import (
+	"flag"
+	"log"
+	"os"
+
+	kitlog "github.com/go-kit/log"
+)
+
+// 定义两个全局变量，用于存储日志记录器
+var Logger *log.Logger
+var KitLogger kitlog.Logger
+
+var (
+	RegisterGrpcHost string
+	RegisterGrpcPort string
+	IsK8s            bool
+)
+
+// init 函数在包初始化时自动执行
+func init() {
+	// TODO:监控
+	//prometheus.MustRegister(RequestsVote)
+	//prometheus.MustRegister(RequestsResult)
+
+	// 初始化标准库日志记录器
+	Logger = log.New(os.Stderr, "", log.LstdFlags)
+
+	// 初始化 go-kit 日志记录器
+	KitLogger = kitlog.NewLogfmtLogger(os.Stderr)
+	// 为 go-kit 日志记录器添加时间戳字段
+	KitLogger = kitlog.With(KitLogger, "ts", kitlog.DefaultTimestampUTC)
+	// 为 go-kit 日志记录器添加调用者信息字段
+	KitLogger = kitlog.With(KitLogger, "caller", kitlog.DefaultCaller)
+
+	// 定义命令行标志
+	flag.StringVar(&RegisterGrpcHost, "host", "10.76.143.1", "The host to register grpc")
+	flag.StringVar(&RegisterGrpcPort, "port", "20001", "The port to register grpc")
+	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
+
+	// 解析命令行标志
+	flag.Parse()
+
+}
+
+// TODO:引入下面的东西
+//var (
+//	Client       *redis.Client
+//	ZipkinTracer *zipkin.Tracer
+//)
+
+// promethues指标
+//var (
+//	RequestsVote = prometheus.NewCounter(
+//		prometheus.CounterOpts{
+//			Name: "vote_times_" + ServicePortString,
+//			Help: "Total number of vote requests.",
+//		},
+//	)
+//	RequestsResult = prometheus.NewCounter(
+//		prometheus.CounterOpts{
+//			Name: "result_times_" + ServicePortString,
+//			Help: "Total number of vote result requests.",
+//		},
+//	)
+//)
