@@ -54,10 +54,10 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 		encodeGRPCRegisterRequest,
 		decodeGRPCRegisterResponse,
 		registerpb.RegisterRequest{},
+		//clientTracer,
 	).Endpoint()
 
 	// 使用端点进行调用grpc
-	//ctx = context.Background()
 	request := &registerpb.RegisterRequest{
 		Name:     name,
 		Host:     host,
