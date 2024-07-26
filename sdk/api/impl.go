@@ -54,6 +54,10 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 		Timout:   int64(timeout),
 	}
 	response, err := ep(ctx, request)
+	if err != nil {
+		fmt.Println("~~~~~~~~~~impl", err)
+		return "", err
+	}
 	r := response.(*registerpb.RegisterResponse)
 
 	fmt.Println(r)
