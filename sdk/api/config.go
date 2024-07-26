@@ -4,10 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	registerpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto"
+	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
-	registerpb "sdk/proto"
-	"sdk/service"
 )
 
 var (

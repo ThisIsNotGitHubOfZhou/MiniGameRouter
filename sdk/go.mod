@@ -1,4 +1,4 @@
-module sdk
+module github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk
 
 go 1.22.0
 
