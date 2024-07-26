@@ -21,7 +21,7 @@ var _ Service = (*RegisterService)(nil)
 
 func (s *RegisterService) Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
 	// TODO:能否用host+port组合成为服务实例ID
-	config.Logger.Println("~~~~~~hello world")
+	config.Logger.Println("service~~~~~~hello world")
 	return "465798222", nil
 }
 

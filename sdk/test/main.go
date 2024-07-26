@@ -13,7 +13,6 @@ func main() {
 	str, err := client.Register(ctx, "", "", "", "", "", 1, 2)
 	if err != nil {
 		fmt.Println("client~~~~~~~~~~", err)
-	} else {
-		fmt.Println("client~~~~~~~~~~str", str)
 	}
+	fmt.Println("client~~~~~~~~~~str", str)
 }

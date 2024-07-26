@@ -5,8 +5,8 @@ import (
 	"fmt"
 	registerpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
+	"time"
 )
 
 type MiniClient struct {
@@ -24,7 +24,6 @@ func NewMiniClient() *MiniClient {
 
 func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
 	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
-	//conn, err := grpc.Dial("9.135.95.71:50051", grpc.WithInsecure())
 	if err != nil {
 		return "", err
 	}
@@ -32,18 +31,11 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
-	// 使用 go-kit 的 gRPC 客户端传输层
-	var ep = grpctransport.NewClient(
-		conn,
-		"register.RegisterServiceServer", // 服务名称,注意前面要带包名！！！！！
-		"Register",                       // 方法名称
-		encodeGRPCRegisterRequest,
-		decodeGRPCRegisterResponse,
-		registerpb.RegisterResponse{},
-		//clientTracer,
-	).Endpoint()
+	// 原版grpc请求
+	cli := registerpb.NewRegisterServiceClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	// 使用端点进行调用grpc
 	request := &registerpb.RegisterRequest{
 		Name:     name,
 		Host:     host,
@@ -53,14 +45,45 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 		Weight:   int64(weight),
 		Timout:   int64(timeout),
 	}
-	response, err := ep(ctx, request)
-	if err != nil {
-		fmt.Println("~~~~~~~~~~impl", err)
-		return "", err
-	}
-	r := response.(*registerpb.RegisterResponse)
+	r, err := cli.Register(ctx, request)
 
-	fmt.Println(r)
+	if err != nil {
+		fmt.Println("~~~~~~~~~~~~~implerr", err)
+		return r.Id, err
+	} else {
+		fmt.Println("str~~~~~~~~~~~~~implerr", r.Id)
+		return r.Id, err
+	}
+
+	//// 使用 go-kit 的 gRPC 客户端传输层
+	//var ep = grpctransport.NewClient(
+	//	conn,
+	//	"register.RegisterServiceServer", // 服务名称,注意前面要带包名！！！！！
+	//	"Register",                       // 方法名称
+	//	encodeGRPCRegisterRequest,
+	//	decodeGRPCRegisterResponse,
+	//	registerpb.RegisterResponse{},
+	//	//clientTracer,
+	//).Endpoint()
+	//
+	//// 使用端点进行调用grpc
+	//request := &registerpb.RegisterRequest{
+	//	Name:     name,
+	//	Host:     host,
+	//	Port:     port,
+	//	Protocol: protocol,
+	//	Metadata: metadata,
+	//	Weight:   int64(weight),
+	//	Timout:   int64(timeout),
+	//}
+	//response, err := ep(ctx, request)
+	//if err != nil {
+	//	fmt.Println("~~~~~~~~~~impl", err)
+	//	return "", err
+	//}
+	//r := response.(*registerpb.RegisterResponse)
+	//
+	//fmt.Println(r)
 	return "", nil
 }
 func encodeGRPCRegisterRequest(_ context.Context, request interface{}) (interface{}, error) {

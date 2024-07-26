@@ -41,8 +41,6 @@ func (s *GrpcServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 	if err != nil {
 		return nil, err
 	}
-	//res := resp.(*endpoint.RegisterResponse)
-	//return &pb.RegisterResponse{Id: res.InstanceID, ErrorMes: res.Error.Error()}, nil
 	return resp.(*pb.RegisterResponse), err
 }
 
@@ -76,9 +74,15 @@ func encodeGRPCRegisterResponse(_ context.Context, grpcResp interface{}) (interf
 	if !ok {
 		return nil, fmt.Errorf("encodeGRPCRegisterResponse invalid response type: %T", grpcResp)
 	}
+	if resp.Error != nil {
+		return &pb.RegisterResponse{
+			Id:       resp.InstanceID,
+			ErrorMes: resp.Error.Error(),
+		}, nil
+	}
 	return &pb.RegisterResponse{
 		Id:       resp.InstanceID,
-		ErrorMes: resp.Error.Error(),
+		ErrorMes: "",
 	}, nil
 }
 
@@ -115,5 +119,8 @@ func encodeGRPCDeRegisterResponse(_ context.Context, grpcResp interface{}) (inte
 	if !ok {
 		return nil, fmt.Errorf("encodeGRPCDeRegisterResponse invalid response type: %T", grpcResp)
 	}
-	return &pb.DeRegisterResponse{ErrorMes: res.Error.Error()}, nil
+	if res.Error != nil {
+		return &pb.DeRegisterResponse{ErrorMes: res.Error.Error()}, res.Error
+	}
+	return &pb.DeRegisterResponse{}, nil
 }
