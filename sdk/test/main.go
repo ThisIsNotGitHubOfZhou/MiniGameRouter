@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/api"
 )
@@ -10,9 +11,16 @@ import (
 func main() {
 	client := api.NewMiniClient()
 	ctx := context.Background()
-	str, err := client.Register(ctx, "", "", "", "", "", 1, 2)
-	if err != nil {
-		fmt.Println("client~~~~~~~~~~", err)
-	}
-	fmt.Println("client~~~~~~~~~~str", str)
+	client.Register(ctx, "zcf", "123888", ":"+strconv.Itoa(2), "", "", 1, 15)
+
+	time.Sleep(5 * time.Second)
+
+	client.DeRegister(ctx, "id", "zcf", "", "")
+	//for i := 0; i < 1000000; i++ {
+	//	str, err := client.Register(ctx, strconv.Itoa(i), "123888", ":"+strconv.Itoa(i), "", "", 1, 15)
+	//	if err != nil {
+	//		fmt.Println("SDK test Register error:", err)
+	//	}
+	//	fmt.Println("SDK test Register istance：", str)
+	//}
 }

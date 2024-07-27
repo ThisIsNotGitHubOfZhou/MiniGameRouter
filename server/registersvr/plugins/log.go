@@ -26,6 +26,7 @@ func (mw *loggingMiddleware) Register(name, host, port, protocol, metadata strin
 		mw.logger.Log(
 			"function", "Register",
 			"name", name,
+			"instance_id", instanceID,
 			"host", host,
 			"port", port,
 			"protocol", protocol,

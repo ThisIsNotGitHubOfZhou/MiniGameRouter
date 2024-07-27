@@ -103,7 +103,7 @@ func decodeGRPCDeRegisterRequest(_ context.Context, grpcReq interface{}) (interf
 		return nil, fmt.Errorf("decodeGRPCDeRegisterRequest invalid request type: %T", grpcReq)
 	}
 
-	req := &endpoint.DeRegisterRequest{
+	req := endpoint.DeRegisterRequest{
 		ID:   res.Id,
 		Name: res.Name,
 		Host: res.Host,

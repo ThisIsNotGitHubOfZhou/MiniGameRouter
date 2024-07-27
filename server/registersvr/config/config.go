@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"github.com/go-redis/redis/v8"
 	"log"
 	"os"
 
@@ -13,6 +14,7 @@ var Logger *log.Logger
 var KitLogger kitlog.Logger
 
 var (
+	RedisClient      *redis.Client
 	RegisterGrpcHost string
 	RegisterGrpcPort string
 	IsK8s            bool
@@ -41,6 +43,12 @@ func init() {
 
 	// 解析命令行标志
 	flag.Parse()
+
+	RedisClient = redis.NewClient(&redis.Options{
+		Addr:     "21.6.163.18:6380", // Redis 地址
+		Password: "664597599Zcf!",    // Redis 密码，没有则留空
+		DB:       0,                  // 使用的数据库，默认为0
+	})
 
 }
 

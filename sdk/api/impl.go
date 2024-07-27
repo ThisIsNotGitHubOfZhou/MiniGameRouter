@@ -5,8 +5,8 @@ import (
 	"fmt"
 	registerpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
+	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
-	"time"
 )
 
 type MiniClient struct {
@@ -31,42 +31,11 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
-	// 原版grpc请求
-	cli := registerpb.NewRegisterServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	request := &registerpb.RegisterRequest{
-		Name:     name,
-		Host:     host,
-		Port:     port,
-		Protocol: protocol,
-		Metadata: metadata,
-		Weight:   int64(weight),
-		Timout:   int64(timeout),
-	}
-	r, err := cli.Register(ctx, request)
-
-	if err != nil {
-		fmt.Println("~~~~~~~~~~~~~implerr", err)
-		return r.Id, err
-	} else {
-		fmt.Println("str~~~~~~~~~~~~~implerr", r.Id)
-		return r.Id, err
-	}
-
-	//// 使用 go-kit 的 gRPC 客户端传输层
-	//var ep = grpctransport.NewClient(
-	//	conn,
-	//	"register.RegisterServiceServer", // 服务名称,注意前面要带包名！！！！！
-	//	"Register",                       // 方法名称
-	//	encodeGRPCRegisterRequest,
-	//	decodeGRPCRegisterResponse,
-	//	registerpb.RegisterResponse{},
-	//	//clientTracer,
-	//).Endpoint()
+	// 原版grpc请求~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//cli := registerpb.NewRegisterServiceClient(conn)
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	//defer cancel()
 	//
-	//// 使用端点进行调用grpc
 	//request := &registerpb.RegisterRequest{
 	//	Name:     name,
 	//	Host:     host,
@@ -76,15 +45,46 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 	//	Weight:   int64(weight),
 	//	Timout:   int64(timeout),
 	//}
-	//response, err := ep(ctx, request)
-	//if err != nil {
-	//	fmt.Println("~~~~~~~~~~impl", err)
-	//	return "", err
-	//}
-	//r := response.(*registerpb.RegisterResponse)
+	//r, err := cli.Register(ctx, request)
 	//
-	//fmt.Println(r)
-	return "", nil
+	//if err != nil {
+	//	fmt.Println("sdk_api_impl_Register error", err)
+	//	return r.Id, err
+	//} else {
+	//	return r.Id, err
+	//}
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	var ep = grpctransport.NewClient(
+		conn,
+		"register.RegisterService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
+		"Register",                 // 方法名称
+		encodeGRPCRegisterRequest,
+		decodeGRPCRegisterResponse,
+		registerpb.RegisterResponse{},
+		//clientTracer,
+	).Endpoint()
+
+	// 使用端点进行调用grpc
+	request := &registerpb.RegisterRequest{
+		Name:     name,
+		Host:     host,
+		Port:     port,
+		Protocol: protocol,
+		Metadata: metadata,
+		Weight:   int64(weight),
+		Timout:   int64(timeout),
+	}
+	response, err := ep(ctx, request)
+	if err != nil {
+		fmt.Println("sdk_api_impl_Register grpc error", err)
+		return "", err
+	}
+	r := response.(*registerpb.RegisterResponse)
+
+	fmt.Println(r)
+	return r.Id, nil
 }
 func encodeGRPCRegisterRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*registerpb.RegisterRequest)
@@ -95,6 +95,77 @@ func decodeGRPCRegisterResponse(_ context.Context, response interface{}) (interf
 	return resp, nil
 }
 
-func (c *MiniClient) Deregister(username, password string) error {
+func (c *MiniClient) DeRegister(ctx context.Context, id, name, host, port string) error {
+	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
+
+	// 原版grpc请求~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//cli := registerpb.NewRegisterServiceClient(conn)
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	//defer cancel()
+	//
+	//request := &registerpb.DeRegisterRequest{
+	//	Id:   id,
+	//	Name: name,
+	//	Host: host,
+	//	Port: port,
+	//}
+	//r, err := cli.DeRegister(ctx, request)
+	//
+	//if err != nil {
+	//	fmt.Println("sdk_api_impl_DeRegister grpc error", err)
+	//	return err
+	//}
+	//
+	//if r.ErrorMes != "" {
+	//	fmt.Println("sdk_api_impl_DeRegister error", r.ErrorMes)
+	//	err = fmt.Errorf("%s", r.ErrorMes)
+	//}
+	//
+	//return err
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	var ep = grpctransport.NewClient(
+		conn,
+		"register.RegisterService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
+		"DeRegister",               // 方法名称
+		encodeGRPCDeRegisterRequest,
+		decodeGRPCDeRegisterResponse,
+		registerpb.DeRegisterResponse{},
+		//clientTracer,
+	).Endpoint()
+
+	// 使用端点进行调用grpc
+	request := &registerpb.DeRegisterRequest{
+		Id:   id,
+		Name: name,
+		Host: host,
+		Port: port,
+	}
+	response, err := ep(ctx, request)
+	if err != nil {
+		fmt.Println("sdk_api_impl_Register grpc error", err)
+		return err
+	}
+	r := response.(*registerpb.DeRegisterResponse)
+	if r.ErrorMes != "" {
+		return fmt.Errorf("%v", r.ErrorMes)
+	}
+
 	return nil
+}
+
+func encodeGRPCDeRegisterRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*registerpb.DeRegisterRequest)
+	return req, nil
+}
+func decodeGRPCDeRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*registerpb.DeRegisterResponse)
+	return resp, nil
 }
