@@ -2,7 +2,7 @@ module clienta
 
 go 1.22.0
 
-require github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240726134805-1fe7224e2e20
+require github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240727082729-67d953ce44c8
 
 require (
 	github.com/go-kit/kit v0.13.0 // indirect

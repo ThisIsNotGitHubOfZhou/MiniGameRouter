@@ -1,5 +1,7 @@
 github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240726134805-1fe7224e2e20 h1:uF48F3M7UlVP7fOGPYtcheCuYQUGXW6SnJCmfa+ytK0=
 github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240726134805-1fe7224e2e20/go.mod h1:0m9QPqnFVCT96CXN6KhoezDPrK3LkhlntqZlAW1w888=
+github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240727082729-67d953ce44c8 h1:WrwSPK0X1vGfKipfHxB+MfFPhlLo1rALs9LGPulBWAM=
+github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk v0.0.0-20240727082729-67d953ce44c8/go.mod h1:i8Cm6eKiZr+nlHtEctKUewCJae8aKdwc+PwjpIe4bmw=
 github.com/go-kit/kit v0.13.0 h1:OoneCcHKHQ03LfBpoQCUfCluwd2Vt3ohz+kvbJneZAU=
 github.com/go-kit/kit v0.13.0/go.mod h1:phqEHMMUbyrCFCTgH48JueqrM3md2HcAZ8N3XE4FKDg=
 github.com/go-kit/log v0.2.1 h1:MRVx0/zhvdseW+Gza6N9rVzU/IVzaeE1SFI4raAhmBU=
