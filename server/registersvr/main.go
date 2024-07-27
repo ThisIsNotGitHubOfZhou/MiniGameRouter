@@ -67,7 +67,7 @@ func main() {
 
 	// 连接grpc
 	go func() {
-		lis, err := net.Listen("tcp", ":"+config.RegisterGrpcPort)
+		lis, err := net.Listen("tcp", "0.0.0.0:"+config.RegisterGrpcPort)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
