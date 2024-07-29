@@ -191,7 +191,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 
 	http.ListenAndServe(":"+port, nil)
 
-	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
+	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func decodeGRPCHealthCheckSResponse(_ context.Context, response interface{}) (in
 }
 
 func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string, timeout int) error {
-	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
+	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
