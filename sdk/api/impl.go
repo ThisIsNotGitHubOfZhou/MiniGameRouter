@@ -34,6 +34,7 @@ func NewMiniClient(name, ip string, timeout int) *MiniClient {
 }
 
 func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
+	fmt.Println("[Info][sdk] Register，注册服务:", name)
 	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
 	if err != nil {
 		return "", err
@@ -108,6 +109,7 @@ func decodeGRPCRegisterResponse(_ context.Context, response interface{}) (interf
 }
 
 func (c *MiniClient) DeRegister(ctx context.Context, id, name, host, port string) error {
+	fmt.Println("[Info][sdk] DeRegister，删除服务:", id, name)
 	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -184,12 +186,16 @@ func decodeGRPCDeRegisterResponse(_ context.Context, response interface{}) (inte
 
 func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 	// 启动一个http服务一直返回200
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
 
-	http.ListenAndServe(":"+port, nil)
+	go func() {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})
+		fmt.Println("[Info][sdk] 启动healthcheck 端口:", port)
+		http.ListenAndServe("0.0.0.0:"+port, nil)
+
+	}()
 
 	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
 	if err != nil {
@@ -219,7 +225,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 	}
 	response, err := ep(ctx, request)
 	if err != nil {
-		fmt.Println("[Error][sdk] sdk_api_impl_healthcheckS grpc error", err)
+		fmt.Println("[Error][sdk] healthcheckS grpc 出错：", err)
 		return err
 	}
 	r := response.(*healthcheckpb.HealthCheckSResponse)
@@ -277,7 +283,7 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 				}
 				response, err := ep(ctx, request)
 				if err != nil {
-					fmt.Println("[Error][sdk] sdk_api_impl_healthcheckc grpc error", err)
+					fmt.Println("[Error][sdk] healthcheckc grpc 出错：", err)
 					return
 				}
 				r := response.(*healthcheckpb.HealthCheckCResponse)
