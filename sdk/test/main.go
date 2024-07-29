@@ -9,11 +9,13 @@ import (
 )
 
 func main() {
-	client := api.NewMiniClient()
+	client := api.NewMiniClient("zcf", "10.76.143.1", 10)
 	ctx := context.Background()
 	client.Register(ctx, "zcf", "123888", ":"+strconv.Itoa(2), "", "", 1, 15)
 
-	time.Sleep(5 * time.Second)
+	client.HealthCheckS(ctx, "60001")
+
+	time.Sleep(500 * time.Second)
 
 	client.DeRegister(ctx, "id", "zcf", "", "")
 	//for i := 0; i < 1000000; i++ {
