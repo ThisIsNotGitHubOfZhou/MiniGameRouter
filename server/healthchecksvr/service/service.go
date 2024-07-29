@@ -29,7 +29,7 @@ var _ Service = (*HealthCheckService)(nil)
 
 // TODO:性能检测~
 func (s *HealthCheckService) HealthCheckS(Url string, name string, second int) error {
-
+	config.Logger.Printf("[Info][healthcheck] HealthCheckS服务器主动检查,URL:%v,name:%v,时长:%v\n", Url, name, second)
 	go func() {
 		retry := 0
 		for {
@@ -42,7 +42,7 @@ func (s *HealthCheckService) HealthCheckS(Url string, name string, second int) e
 				}
 				continue
 			}
-			go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3+5*time.Second)
+			go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3*time.Second+5*time.Second)
 		}
 	}()
 
@@ -53,6 +53,7 @@ func healthCheck(Url string) bool {
 	// 访问url的地址确定是否返回true
 	resp, err := http.Get(Url)
 	if err != nil {
+		config.Logger.Printf("[Error][healthcheck] HealthCheckS服务器主动检查,访问接口URL出错,URL:%v,错误:%v,时长:%v\n", Url, err)
 		return false
 	}
 	defer resp.Body.Close()
@@ -61,6 +62,7 @@ func healthCheck(Url string) bool {
 }
 
 func (s *HealthCheckService) HealthCheckC(id, name, host, port string, second int) error {
-	go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3+5*time.Second)
+	config.Logger.Printf("[Info][healthcheck] HealthCheckC客户端主动发送,id:%v,name:%v,时长:%v\n", id, name, second)
+	go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3*time.Second+5*time.Second)
 	return nil
 }
