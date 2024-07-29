@@ -1,0 +1,70 @@
+package database
+
+import (
+	"context"
+	"github.com/go-redis/redis/v8"
+	"healthchecksvr/config"
+	"time"
+)
+
+var ctx = context.Background()
+
+// 续约服务实例
+func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Duration) {
+
+	cmd := client.Expire(ctx, instanceID, ttl)
+	err := cmd.Err()
+	exist := cmd.Val()
+	if !exist {
+		config.Logger.Println("[Warning] 续约服务的时候键不存在!")
+	}
+
+	if err != nil {
+		config.Logger.Println("[Error] healthcheck 续约服务Failed to renew service instance:", err)
+	} else {
+		config.Logger.Println("[info] healthcheck 续约服务Service instance renewed successfully")
+	}
+
+}
+
+// 删除服务实例
+func DeRegisterServiceInstance(client *redis.Client, instanceID string) {
+	// 使用Del删除服务实例信息
+	config.Logger.Println("注销实例：", instanceID)
+	err := client.Del(ctx, instanceID).Err()
+	if err != nil {
+		config.Logger.Println("[Error] healthcheck 删除服务实例出错：", err)
+	}
+}
+
+// 发现服务实例
+func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string, error) {
+	keys, err := client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	services := make([]map[string]string, 0, len(keys))
+	for _, key := range keys {
+		serviceInfo, err := client.HGetAll(ctx, key).Result()
+		if err != nil {
+			continue
+		}
+		services = append(services, serviceInfo)
+	}
+
+	return services, nil
+}
+
+// 注册服务实例
+func RegisterServiceInstance(client *redis.Client, instanceID string, instanceInfo map[string]interface{}, ttl time.Duration) error {
+	// 使用HMSet存储服务实例信息
+	config.Logger.Println("注册实例：", instanceID)
+	err := client.HMSet(ctx, instanceID, instanceInfo).Err()
+	if err != nil {
+		return err
+	}
+	// 设置过期时间，一般为3倍过期
+	return client.Expire(ctx, instanceID, ttl).Err()
+
+}

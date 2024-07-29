@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package healthcheck;
+
+option go_package = "healthchecksvr/healthcheck";
+
+service HealthCheckService {
+  rpc HealthCheckS (HealthCheckSRequest) returns (HealthCheckSResponse) {}
+  rpc HealthCheckC (HealthCheckCRequest) returns (HealthCheckCResponse) {}
+}
+
+message HealthCheckSRequest {
+  string name = 1;// 服务名称
+  string instanceID = 2; // 服务实例ID
+  string url = 3; // 客户端暴露的URL
+  int64 timeout = 4; // 过期时间
+
+
+}
+
+message HealthCheckSResponse {
+  string error_mes = 1; // 失败原因
+}
+
+
+message HealthCheckCRequest{
+  string id = 1; // 服务实例ID
+  string name = 2; // 服务名
+  string host = 3; // 服务Host
+  string port = 4; // 服务Port
+  int64 timeout = 5; // 过期时间
+}
+
+message HealthCheckCResponse{
+  string error_mes = 1; // 失败原因
+}

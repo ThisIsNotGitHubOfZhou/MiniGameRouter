@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
 	"registersvr/config"
 	"time"
@@ -33,22 +32,18 @@ func DeRegisterServiceInstance(client *redis.Client, instanceID string) error {
 // 续约服务实例
 func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Duration) {
 
-	err := client.Expire(ctx, instanceID, ttl).Err()
-	if err != nil {
-		fmt.Println("Failed to renew service instance:", err)
-	} else {
-		fmt.Println("Service instance renewed successfully")
+	cmd := client.Expire(ctx, instanceID, ttl)
+	err := cmd.Err()
+	exist := cmd.Val()
+	if !exist {
+		config.Logger.Println("[Warning] 续约服务的时候键不存在!")
 	}
 
-	// TODO:可以将下面的东西写到SDK里面定时发送吗？
-	//ticker := time.NewTicker(ttl / 2)
-	//defer ticker.Stop()
-	//for {
-	//	select {
-	//	case <-ticker.C:
-	//
-	//	}
-	//}
+	if err != nil {
+		config.Logger.Println("Failed to renew service instance:", err)
+	} else {
+		config.Logger.Println("Service instance renewed successfully")
+	}
 }
 
 // 发现服务实例
