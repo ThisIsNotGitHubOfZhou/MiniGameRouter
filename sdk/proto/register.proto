@@ -16,7 +16,7 @@ message RegisterRequest {
   string protocol = 4; // 协议
   string metadata = 5; // 元数据键值对
   int64 weight = 6; // 权重
-  int64 timout = 7; // 过期时长
+  int64 timeout = 7; // 过期时长
 
 }
 

@@ -60,7 +60,7 @@ func decodeGRPCRegisterRequest(ctx context.Context, grpcReq interface{}) (interf
 		Protocol: req.Protocol,
 		Metadata: req.Metadata,
 		Weight:   int(req.Weight),
-		Timeout:  int(req.Timout),
+		Timeout:  int(req.Timeout),
 	}
 	// req := grpcReq.(endpoint.VoteToRedisRequest)
 	return edptReq, nil

@@ -24,7 +24,9 @@ type RegisterService struct{}
 
 var _ Service = (*RegisterService)(nil)
 
-// TODO：100ms一次？需要优化一下？？
+// TODO：暂时用name当作redis键
+
+// TODO：200ms一次？需要优化一下？？
 func (s *RegisterService) Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
 
 	// TODO:能否用host+port组合成为服务实例ID
@@ -38,7 +40,7 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 		"timeout":      timeout,
 		"metadata":     metadata,
 	}
-	err := database.RegisterServiceInstance(config.RedisClient, name, instanceInfo, time.Duration(timeout)*time.Second)
+	err := database.RegisterServiceInstance(config.RedisClient, name, instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
 	if err != nil {
 		config.Logger.Println("RegisterServiceInstance 出错:", err)
 		return "", err

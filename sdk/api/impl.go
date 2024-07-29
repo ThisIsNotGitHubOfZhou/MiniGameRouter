@@ -74,7 +74,7 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 		Protocol: protocol,
 		Metadata: metadata,
 		Weight:   int64(weight),
-		Timout:   int64(timeout),
+		Timeout:  int64(timeout),
 	}
 	response, err := ep(ctx, request)
 	if err != nil {
