@@ -220,7 +220,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 	request := &healthcheckpb.HealthCheckSRequest{
 		Name:       c.name,
 		InstanceID: "",
-		Url:        c.ip + ":" + port + "/",
+		Url:        "http://" + c.ip + ":" + port + "/",
 		Timeout:    int64(c.timeout),
 	}
 	response, err := ep(ctx, request)
@@ -246,27 +246,29 @@ func decodeGRPCHealthCheckSResponse(_ context.Context, response interface{}) (in
 	return resp, nil
 }
 
+// TODO:优化GRPC连接问题
 func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string, timeout int) error {
-	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
-
-	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	var ep = grpctransport.NewClient(
-		conn,
-		"healthcheck.HealthCheckService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
-		"HealthCheckC",                   // 方法名称
-		encodeGRPCHealthCheckCRequest,
-		decodeGRPCHealthCheckCResponse,
-		healthcheckpb.HealthCheckCResponse{},
-		//clientTracer,
-	).Endpoint()
 
 	go func() {
+		conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("[Error][sdk] gprc连接问题：", err)
+			return
+		}
+		defer conn.Close()
+
+		//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
+
+		//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		var ep = grpctransport.NewClient(
+			conn,
+			"healthcheck.HealthCheckService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
+			"HealthCheckC",                   // 方法名称
+			encodeGRPCHealthCheckCRequest,
+			decodeGRPCHealthCheckCResponse,
+			healthcheckpb.HealthCheckCResponse{},
+			//clientTracer,
+		).Endpoint()
 		ticker := time.NewTicker(3 * time.Duration(c.timeout) * time.Second)
 		defer ticker.Stop()
 
@@ -274,6 +276,7 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 			select {
 			case <-ticker.C:
 				// 使用端点进行调用grpc
+
 				request := &healthcheckpb.HealthCheckCRequest{
 					Id:      id,
 					Name:    name,
@@ -281,6 +284,7 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 					Port:    port,
 					Timeout: int64(c.timeout),
 				}
+				fmt.Println("[Info][sdk] healthcheckc 发送续约请求：", request)
 				response, err := ep(ctx, request)
 				if err != nil {
 					fmt.Println("[Error][sdk] healthcheckc grpc 出错：", err)

@@ -13,7 +13,8 @@ func main() {
 	ctx := context.Background()
 	client.Register(ctx, "zcf", "123888", ":"+strconv.Itoa(2), "", "", 1, 10)
 
-	client.HealthCheckS(ctx, "60001")
+	//client.HealthCheckS(ctx, "60001")
+	client.HealthCheckC(ctx, "11", "zcf", "", "", 10)
 
 	time.Sleep(500 * time.Second)
 

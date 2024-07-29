@@ -53,7 +53,7 @@ func healthCheck(Url string) bool {
 	// 访问url的地址确定是否返回true
 	resp, err := http.Get(Url)
 	if err != nil {
-		config.Logger.Printf("[Error][healthcheck] HealthCheckS服务器主动检查,访问接口URL出错,URL:%v,错误:%v,时长:%v\n", Url, err)
+		config.Logger.Printf("[Error][healthcheck] HealthCheckS服务器主动检查,访问接口URL出错,URL:%v,错误:%v\n", Url, err)
 		return false
 	}
 	defer resp.Body.Close()
