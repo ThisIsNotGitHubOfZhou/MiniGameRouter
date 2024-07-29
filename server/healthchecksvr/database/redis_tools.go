@@ -11,18 +11,18 @@ var ctx = context.Background()
 
 // 续约服务实例
 func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Duration) {
-
+	config.Logger.Printf("[Info][healthcheck] 续约服务:%v,续约时长:%v\n", instanceID, ttl)
 	cmd := client.Expire(ctx, instanceID, ttl)
 	err := cmd.Err()
 	exist := cmd.Val()
 	if !exist {
-		config.Logger.Println("[Warning] 续约服务的时候键不存在!")
+		config.Logger.Println("[Warning][healthcheck] 续约服务的时候键不存在!")
 	}
 
 	if err != nil {
-		config.Logger.Println("[Error] healthcheck 续约服务Failed to renew service instance:", err)
+		config.Logger.Println("[Error][healthcheck] 续约服务Failed to renew service instance:", err)
 	} else {
-		config.Logger.Println("[info] healthcheck 续约服务Service instance renewed successfully")
+		config.Logger.Println("[info][healthcheck] 续约服务Service instance renewed successfully")
 	}
 
 }
@@ -30,13 +30,14 @@ func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Dura
 // 删除服务实例
 func DeRegisterServiceInstance(client *redis.Client, instanceID string) {
 	// 使用Del删除服务实例信息
-	config.Logger.Println("注销实例：", instanceID)
+	config.Logger.Printf("[Info][healthcheck] 注销实例:%v\n", instanceID)
 	err := client.Del(ctx, instanceID).Err()
 	if err != nil {
-		config.Logger.Println("[Error] healthcheck 删除服务实例出错：", err)
+		config.Logger.Printf("[Error][healthcheck] healthcheck 删除服务实例出错：%v,错误:%v\n", instanceID, err)
 	}
 }
 
+// TODO:如果启用记得打日志~
 // 发现服务实例
 func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string, error) {
 	keys, err := client.Keys(ctx, pattern).Result()

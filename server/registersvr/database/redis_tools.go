@@ -12,7 +12,7 @@ var ctx = context.Background()
 // 注册服务实例
 func RegisterServiceInstance(client *redis.Client, instanceID string, instanceInfo map[string]interface{}, ttl time.Duration) error {
 	// 使用HMSet存储服务实例信息
-	config.Logger.Println("注册实例：", instanceID)
+	config.Logger.Printf("[Info][register] 注册实例database.RegisterServiceInstance,名称：%v，\n", instanceID)
 	err := client.HMSet(ctx, instanceID, instanceInfo).Err()
 	if err != nil {
 		return err
@@ -25,10 +25,11 @@ func RegisterServiceInstance(client *redis.Client, instanceID string, instanceIn
 // 注册服务实例
 func DeRegisterServiceInstance(client *redis.Client, instanceID string) error {
 	// 使用Del删除服务实例信息
-	config.Logger.Println("注销实例：", instanceID)
+	config.Logger.Printf("[Info][register] 删除实例database.DeRegisterServiceInstance,名称：%v，\n", instanceID)
 	return client.Del(ctx, instanceID).Err()
 }
 
+// TODO:使用下面函数记得写好log
 // 续约服务实例
 func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Duration) {
 

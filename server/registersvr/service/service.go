@@ -40,19 +40,20 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 		"timeout":      timeout,
 		"metadata":     metadata,
 	}
+	config.Logger.Printf("[Info][register] 注册实例,名称：%v，信息：%v\n", name, instanceInfo)
 	err := database.RegisterServiceInstance(config.RedisClient, name, instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
 	if err != nil {
-		config.Logger.Println("RegisterServiceInstance 出错:", err)
+		config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
 		return "", err
 	}
 	return host + port, nil
 }
 
 func (s *RegisterService) Deregister(id, name, host, port string) error {
-
+	config.Logger.Printf("[Info][register] 删除实例,名称：%v，id：%v\n", name, id)
 	err := database.DeRegisterServiceInstance(config.RedisClient, name)
 	if err != nil {
-		config.Logger.Println("DeRegisterServiceInstance 出错:", err)
+		config.Logger.Println("[Error][register] database.DeRegisterServiceInstance 出错:", err)
 		return err
 	}
 	return nil

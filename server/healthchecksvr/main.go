@@ -75,7 +75,7 @@ func main() {
 		// s := grpc.NewServer(grpc.UnaryInterceptor(grpctransport.Interceptor)) // 这是 go-kit 提供的一个拦截器，用于将 go-kit 的中间件集成到 gRPC 服务器中。这个拦截器可以在 gRPC 调用的前后执行一些额外的逻辑，比如日志记录、度量、认证等
 
 		pb.RegisterHealthCheckServiceServer(s, grpcServer)
-		config.Logger.Println("[Info] healthcheck Grpc Server start at port:" + config.HealthCheckGrpcPort)
+		config.Logger.Println("[Info][healthcheck] Grpc Server start at port:" + config.HealthCheckGrpcPort)
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("[Error] healthcheck failed to serve: %v", err)
 		}

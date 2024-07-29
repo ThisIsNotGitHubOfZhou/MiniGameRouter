@@ -9,9 +9,9 @@ import (
 )
 
 func main() {
-	client := api.NewMiniClient("zcf", "10.76.143.1", 10)
+	client := api.NewMiniClient("zcf", "10.76.143.36", 10)
 	ctx := context.Background()
-	client.Register(ctx, "zcf", "123888", ":"+strconv.Itoa(2), "", "", 1, 15)
+	client.Register(ctx, "zcf", "123888", ":"+strconv.Itoa(2), "", "", 1, 10)
 
 	client.HealthCheckS(ctx, "60001")
 
