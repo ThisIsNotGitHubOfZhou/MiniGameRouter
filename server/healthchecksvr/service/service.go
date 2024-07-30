@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	// 服务器帮助定时发送HealthCheck
-	HealthCheckS(Url string, name string, second int) error
+	HealthCheckS(Url string, id string, second int) error
 
 	// 客户端主动发送的~
 	// TODO:修改参数
@@ -28,8 +28,8 @@ var _ Service = (*HealthCheckService)(nil)
 // TODO：暂时用name当作redis键
 
 // TODO:性能检测~
-func (s *HealthCheckService) HealthCheckS(Url string, name string, second int) error {
-	config.Logger.Printf("[Info][healthcheck] HealthCheckS服务器主动检查,URL:%v,name:%v,时长:%v\n", Url, name, second)
+func (s *HealthCheckService) HealthCheckS(Url string, id string, second int) error {
+	config.Logger.Printf("[Info][healthcheck] HealthCheckS服务器主动检查,URL:%v,id:%v,时长:%v\n", Url, id, second)
 	go func() {
 		retry := 0
 		for {
@@ -37,12 +37,12 @@ func (s *HealthCheckService) HealthCheckS(Url string, name string, second int) e
 			if ok := healthCheck(Url); !ok {
 				retry++
 				if retry >= 3 {
-					go database.DeRegisterServiceInstance(config.RedisClient, name) // 更新redis,反注册
+					go database.DeRegisterServiceInstance(config.RedisClient, id) // 更新redis,反注册
 					break
 				}
 				continue
 			}
-			go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3*time.Second+5*time.Second)
+			go database.RenewServiceInstance(config.RedisClient, id, time.Duration(second)*3*time.Second+5*time.Second)
 		}
 	}()
 
@@ -63,6 +63,6 @@ func healthCheck(Url string) bool {
 
 func (s *HealthCheckService) HealthCheckC(id, name, host, port string, second int) error {
 	config.Logger.Printf("[Info][healthcheck] HealthCheckC客户端主动发送,id:%v,name:%v,时长:%v\n", id, name, second)
-	go database.RenewServiceInstance(config.RedisClient, name, time.Duration(second)*3*time.Second+5*time.Second)
+	go database.RenewServiceInstance(config.RedisClient, id, time.Duration(second)*3*time.Second+5*time.Second)
 	return nil
 }

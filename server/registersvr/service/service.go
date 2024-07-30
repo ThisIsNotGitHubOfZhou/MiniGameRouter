@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"registersvr/config"
 	"registersvr/database"
 	"time"
@@ -32,7 +33,7 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 	// TODO:能否用host+port组合成为服务实例ID
 	instanceInfo := map[string]interface{}{
 		"service_name": name,
-		"instance_id":  host + port,
+		"instance_id":  generateInstanceID(name, host, port),
 		"host":         host,
 		"port":         port,
 		"protocol":     protocol,
@@ -41,17 +42,28 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 		"metadata":     metadata,
 	}
 	config.Logger.Printf("[Info][register] 注册实例,名称：%v，信息：%v\n", name, instanceInfo)
-	err := database.RegisterServiceInstance(config.RedisClient, name, instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
+	err := database.RegisterServiceInstance(config.RedisClient, instanceInfo["instance_id"].(string), instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
 	if err != nil {
 		config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
 		return "", err
 	}
-	return host + port, nil
+	return instanceInfo["instance_id"].(string), nil
+}
+
+// 这样生成的唯一也方便，直接根据服务名查询~
+func generateInstanceID(name, host, port string) string {
+	res := name + host + port
+	config.Logger.Println("[Info][register] 生成InstanceID : ", res)
+	return res
 }
 
 func (s *RegisterService) Deregister(id, name, host, port string) error {
 	config.Logger.Printf("[Info][register] 删除实例,名称：%v，id：%v\n", name, id)
-	err := database.DeRegisterServiceInstance(config.RedisClient, name)
+	if id != generateInstanceID(name, host, port) {
+		config.Logger.Printf("[Error][register] 服务实例ID: %v与生成不一样：%v\n", id, generateInstanceID(name, host, port))
+		return fmt.Errorf("服务实例ID: %v与生成不一样：%v", id, generateInstanceID(name, host, port))
+	}
+	err := database.DeRegisterServiceInstance(config.RedisClient, id)
 	if err != nil {
 		config.Logger.Println("[Error][register] database.DeRegisterServiceInstance 出错:", err)
 		return err
