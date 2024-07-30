@@ -20,19 +20,19 @@ func LoggingMiddleware(logger log.Logger) service.ServiceMiddleware {
 	}
 }
 
-func (mw *loggingMiddleware) HealthCheckS(Url string, name string, second int) (err error) {
+func (mw *loggingMiddleware) HealthCheckS(Url string, id string, second int) (err error) {
 	// 函数执行结束后打印日志
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "HealthCheckS",
-			"instance_id", name,
+			"instance_id", id,
 			"Url", Url,
 			"second", second,
 			"took", time.Since(begin),
 		)
 	}(time.Now())
 
-	err = mw.Service.HealthCheckS(Url, name, second)
+	err = mw.Service.HealthCheckS(Url, id, second)
 	return
 }
 
@@ -40,7 +40,8 @@ func (mw loggingMiddleware) HealthCheckC(id, name, host, port string, second int
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "HealthCheckC",
-			"instance_id", name,
+			"instance_id", id,
+			"name", name,
 			"second", second,
 			"took", time.Since(begin),
 		)

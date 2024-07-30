@@ -14,9 +14,14 @@ import (
 
 type MiniClient struct {
 	name       string
-	ip         string
-	healthport string
+	id         string
+	host       string
+	port       string
+	protocol   string
+	metadata   string
+	weight     int
 	timeout    int
+	healthport string
 }
 
 var _ service.RegisterService = (*MiniClient)(nil)
@@ -25,12 +30,52 @@ var _ service.DiscoverService = (*MiniClient)(nil)
 
 var _ service.HealthCheckService = (*MiniClient)(nil)
 
-func NewMiniClient(name, ip string, timeout int) *MiniClient {
+func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout int) *MiniClient {
 	return &MiniClient{
-		name:    name,
-		timeout: timeout,
-		ip:      ip,
+		name:     name,
+		host:     host,
+		port:     port,
+		protocol: protocol,
+		metadata: metadata,
+		weight:   weight,
+		timeout:  timeout,
 	}
+}
+
+func (c *MiniClient) Name() string {
+	return c.name
+}
+
+func (c *MiniClient) ID() string {
+	return c.id
+}
+
+func (c *MiniClient) Host() string {
+	return c.host
+}
+
+func (c *MiniClient) Port() string {
+	return c.port
+}
+
+func (c *MiniClient) Protocol() string {
+	return c.protocol
+}
+
+func (c *MiniClient) Metadata() string {
+	return c.metadata
+}
+
+func (c *MiniClient) Weight() int {
+	return c.weight
+}
+
+func (c *MiniClient) Timeout() int {
+	return c.timeout
+}
+
+func (c *MiniClient) HealthPort() string {
+	return c.healthport
 }
 
 func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
@@ -71,7 +116,8 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 	}
 	r := response.(*registerpb.RegisterResponse)
 
-	fmt.Println(r)
+	fmt.Println("[Info][sdk]  register 结果", r)
+	c.id = r.Id
 	return r.Id, nil
 
 	// 原版grpc请求~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,7 +266,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 	request := &healthcheckpb.HealthCheckSRequest{
 		Name:       c.name,
 		InstanceID: "",
-		Url:        "http://" + c.ip + ":" + port + "/",
+		Url:        "http://" + c.host + ":" + port + "/",
 		Timeout:    int64(c.timeout),
 	}
 	response, err := ep(ctx, request)
@@ -280,7 +326,7 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 				request := &healthcheckpb.HealthCheckCRequest{
 					Id:      id,
 					Name:    name,
-					Host:    c.ip,
+					Host:    c.host,
 					Port:    port,
 					Timeout: int64(c.timeout),
 				}
