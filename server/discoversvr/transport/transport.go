@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"discoversvr/config"
 	"discoversvr/endpoint"
 	pb "discoversvr/proto"
 	"fmt"
@@ -51,6 +52,7 @@ func NewGRPCServer(edp endpoint.DiscoverEndpoint) *GrpcServer {
 func (s *GrpcServer) DiscoverServiceWithName(ctx context.Context, req *pb.DiscoverServiceWithNameRequest) (*pb.DiscoverServiceResponse, error) {
 	_, resp, err := s.discoverServiceWithName.ServeGRPC(ctx, req)
 	if err != nil {
+		config.Logger.Println("[Error][discover] DiscoverServiceWithName grpc服务出错")
 		return nil, err
 	}
 	return resp.(*pb.DiscoverServiceResponse), err

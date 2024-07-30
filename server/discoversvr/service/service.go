@@ -1,6 +1,7 @@
 package service
 
 import (
+	"discoversvr/config"
 	pb "discoversvr/proto"
 )
 
@@ -29,17 +30,22 @@ type DiscoverService struct {
 var _ Service = (*DiscoverService)(nil)
 
 func (s *DiscoverService) DiscoverServiceWithName(name string) ([]*pb.ServiceInfo, error) {
+	config.Logger.Println("[Info][discover] DiscoverServiceWithName begin")
+
 	return nil, nil
 }
 
 func (s *DiscoverService) DiscoverServiceWithID(instanceID string) ([]*pb.ServiceInfo, error) {
+	config.Logger.Println("[Info][discover] DiscoverServiceWithID begin")
 	return nil, nil
 }
 
 func (s *DiscoverService) GetRouteInfoWithName(name string) ([]*pb.RouteInfo, error) {
+	config.Logger.Println("[Info][discover] GetRouteInfoWithName begin")
 	return nil, nil
 }
 
 func (s *DiscoverService) GetRouteInfoWithPrefix(name string, prefix string) ([]*pb.RouteInfo, error) {
+	config.Logger.Println("[Info][discover] GetRouteInfoWithPrefix begin")
 	return nil, nil
 }
