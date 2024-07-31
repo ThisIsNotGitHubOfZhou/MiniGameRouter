@@ -19,7 +19,8 @@ var dbPools map[int]*sql.DB
 var dbPoolsMutex sync.RWMutex
 
 // 初始化数据库连接池
-func initDBPools() {
+// TODO:优化这个部分~
+func init() {
 	dbPools = make(map[int]*sql.DB)
 	for i := 0; i < 32; i++ { // 假设有 32 个分片
 		dsn := fmt.Sprintf("root:664597599Zcf!@tcp(9.134.206.110:3306)/route_db")
@@ -85,16 +86,96 @@ func hashStringToRange(s string, maxRange int) int {
 	return int(hashInt % uint32(maxRange))
 }
 
-func ReadFromMysql(info *pb.RouteInfo) error {
-	// 组合shardingKey:info.Name+info.Host+info.Port生成2位，info.Prefix生成三位，组合在一起生成五位
+func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 
 	// 根据shardingkey选择分片
-	dbID := hashStringToRange(info.Name+info.Host+info.Port, 4)<<3 + hashStringToRange(info.Prefix, 8)
+	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange("", 8)
 
-	config.Logger.Printf("[Info][discover][mysql] WriteToMysql Name: %v, Host: %v, Port: %v, Prefix: %v, DB_ID: %v",
-		info.Name, info.Host, info.Port, info.Prefix, strconv.FormatInt(int64(dbID), 2))
+	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
+		name, strconv.FormatInt(int64(dbID), 2))
 
-	// 直接从mysql里面读？
+	// TODO:后续改造~直接从mysql里面读
+	return readFromDBWithName(dbID, name)
 
-	return nil
+}
+
+func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
+	db, ok := dbPools[dbID]
+	if !ok {
+		return nil, fmt.Errorf("no database found for dbID %d", dbID)
+	}
+
+	tableName := fmt.Sprintf("route_info%d", dbID)
+	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ?", tableName)
+	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
+	rows, err := db.Query(query, name)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var routeInfos []*pb.RouteInfo
+	for rows.Next() {
+		var routeInfo pb.RouteInfo
+		if err := rows.Scan(&routeInfo.Name, &routeInfo.Host, &routeInfo.Port, &routeInfo.Prefix, &routeInfo.Metadata); err != nil {
+			config.Logger.Println("[Error][discover][mysql] 扫描数据错误:", err)
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		routeInfos = append(routeInfos, &routeInfo)
+	}
+
+	if err := rows.Err(); err != nil {
+		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
+		return nil, fmt.Errorf("rows error: %v", err)
+	}
+
+	return routeInfos, nil
+}
+
+func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
+
+	// 根据shardingkey选择分片
+	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange(prefix, 8)
+
+	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
+		name, prefix, strconv.FormatInt(int64(dbID), 2))
+
+	// TODO:后续改造~直接从mysql里面读
+	return readFromDBWithPrefix(dbID, name, prefix)
+
+}
+
+func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error) {
+	db, ok := dbPools[dbID]
+	if !ok {
+		return nil, fmt.Errorf("no database found for dbID %d", dbID)
+	}
+
+	tableName := fmt.Sprintf("route_info%d", dbID)
+	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ? AND prefix = ?", tableName)
+	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
+	rows, err := db.Query(query, name, prefix)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var routeInfos []*pb.RouteInfo
+	for rows.Next() {
+		var routeInfo pb.RouteInfo
+		if err := rows.Scan(&routeInfo.Name, &routeInfo.Host, &routeInfo.Port, &routeInfo.Prefix, &routeInfo.Metadata); err != nil {
+			config.Logger.Println("[Error][discover][mysql] 扫描数据错误:", err)
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		routeInfos = append(routeInfos, &routeInfo)
+	}
+
+	if err := rows.Err(); err != nil {
+		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
+		return nil, fmt.Errorf("rows error: %v", err)
+	}
+
+	return routeInfos, nil
 }

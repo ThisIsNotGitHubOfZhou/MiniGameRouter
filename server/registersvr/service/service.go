@@ -30,7 +30,7 @@ var _ Service = (*RegisterService)(nil)
 // TODO：200ms一次？需要优化一下？？
 func (s *RegisterService) Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
 
-	// TODO:能否用host+port组合成为服务实例ID
+	// TODO:需要跟discoversvr.convertMapToServiceInfo对齐~
 	instanceInfo := map[string]interface{}{
 		"service_name": name,
 		"instance_id":  generateInstanceID(name, host, port),

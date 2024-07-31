@@ -139,6 +139,41 @@ func copyTable(index int) {
 	}
 }
 
+func readFromDBWithName(dbID int, name string) ([]*RouteInfo, error) {
+	db, ok := dbPools[dbID]
+	if !ok {
+		return nil, fmt.Errorf("no database found for dbID %d", dbID)
+	}
+
+	tableName := fmt.Sprintf("route_info%d", dbID)
+	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ?", tableName)
+	fmt.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
+	rows, err := db.Query(query, name)
+	if err != nil {
+		fmt.Println("[Error][discover][mysql] 查询数据错误:", err)
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var routeInfos []*RouteInfo
+	for rows.Next() {
+		var routeInfo RouteInfo
+		if err := rows.Scan(&routeInfo.Name, &routeInfo.Host, &routeInfo.Port, &routeInfo.Prefix, &routeInfo.Metadata); err != nil {
+			fmt.Println("[Error][discover][mysql] 扫描数据错误:", err)
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		routeInfos = append(routeInfos, &routeInfo)
+	}
+
+	if err := rows.Err(); err != nil {
+		fmt.Println("[Error][discover][mysql] 读取数据错误:", err)
+		return nil, fmt.Errorf("rows error: %v", err)
+	}
+
+	return routeInfos, nil
+
+}
+
 func main() {
 	// 初始化 Logger
 
@@ -156,6 +191,15 @@ func main() {
 
 	// 将 RouteInfo 写入 MySQL
 	WriteToMysql(info)
+
+	// 读取
+	res, err := readFromDBWithName(26, "exampleName")
+	if err != nil {
+		fmt.Println("[Error][test] error~~~", err)
+	}
+	for _, val := range res {
+		fmt.Println(*val)
+	}
 
 	//dropTable(32)
 	//copyTable(32)
