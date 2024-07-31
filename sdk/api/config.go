@@ -9,6 +9,8 @@ var (
 	RegisterGrpcPort    string
 	HealthCheckGrpcHost string
 	HealthCheckGrpcPort string
+	DiscoverGrpcHost    string
+	DiscoverGprcPort    string
 	IsK8s               bool
 )
 
@@ -18,5 +20,7 @@ func init() {
 	flag.StringVar(&RegisterGrpcPort, "registerport", "20001", "The port to register grpc")
 	flag.StringVar(&HealthCheckGrpcHost, "healthcheckhost", "9.135.95.71", "The host to register grpc")
 	flag.StringVar(&HealthCheckGrpcPort, "healthcheckport", "30001", "The port to register grpc")
+	flag.StringVar(&DiscoverGrpcHost, "DiscoverGrpcHost", "9.135.95.71", "The host to register grpc")
+	flag.StringVar(&DiscoverGprcPort, "DiscoverGprcPort", "40001", "The port to register grpc")
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
 }
