@@ -29,6 +29,7 @@ type Service interface {
 type ServiceMiddleware func(Service) Service
 
 type DiscoverService struct {
+	// TODO:用这些优化~避免每次都全量发送~
 	routeInfoCache map[string]*pb.RouteInfo // 存储RoutInfo
 	routeDirty     map[string]bool          // route信息是否dirty，方便后续
 }

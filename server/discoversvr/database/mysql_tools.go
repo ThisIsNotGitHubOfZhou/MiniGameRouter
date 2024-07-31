@@ -19,7 +19,7 @@ var dbPools map[int]*sql.DB
 var dbPoolsMutex sync.RWMutex
 
 // 初始化数据库连接池
-// TODO:优化这个部分~
+// TODO:优化这个部分~高并发不会出现冲突+性能
 func init() {
 	dbPools = make(map[int]*sql.DB)
 	for i := 0; i < 32; i++ { // 假设有 32 个分片
