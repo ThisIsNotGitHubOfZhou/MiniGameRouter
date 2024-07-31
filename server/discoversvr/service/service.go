@@ -96,6 +96,5 @@ func (s *DiscoverService) GetRouteInfoWithPrefix(name string, prefix string) ([]
 
 func (s *DiscoverService) SetRouteRule(info *pb.RouteInfo) error {
 	config.Logger.Println("[Info][discover] SetRouteRule begin")
-
 	return database.WriteToMysql(info)
 }
