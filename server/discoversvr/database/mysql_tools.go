@@ -96,6 +96,8 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	endDBID := (hashStringToRange(name, 4)+1)<<3 + 0
 
 	var res []*pb.RouteInfo
+	// TODO:这里耗时较大重点优化~
+	// 只提供name的话，需要遍历部分db
 	for i := dbID; i < endDBID; i++ {
 		config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
 			name, strconv.FormatInt(int64(dbID), 2))

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/api"
-	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	"time"
 )
 
@@ -39,19 +38,19 @@ func main() {
 	//}
 
 	//路由发现
-	tempRoute := &discoverpb.RouteInfo{
-		Name:     "zcf_service",
-		Host:     "0.0.0.0",
-		Port:     "666",
-		Prefix:   "yesyes",
-		Metadata: "{}",
-	}
-	err := client.SetRouteRule(ctx, tempRoute)
-	if err != nil {
-		fmt.Println("[Error][test] SetRouteRule error", err)
-	}
+	//tempRoute := &discoverpb.RouteInfo{
+	//	Name:     "zcf_service",
+	//	Host:     "0.0.0.0",
+	//	Port:     "666",
+	//	Prefix:   "yesyes",
+	//	Metadata: "{}",
+	//}
+	//err := client.SetRouteRule(ctx, tempRoute)
+	//if err != nil {
+	//	fmt.Println("[Error][test] SetRouteRule error", err)
+	//}
 
-	routeInfo, err := client.GetRouteInfoWithPrefix(ctx, "zcf_service", "yesyes")
+	routeInfo, err := client.GetRouteInfoWithName(ctx, "zcf_service")
 	if err != nil {
 		fmt.Println("[Error][test] DiscoverServiceWithName error", err)
 	}
