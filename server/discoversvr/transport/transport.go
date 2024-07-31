@@ -246,5 +246,5 @@ func encodeGRPCSetRouteRuleResponse(_ context.Context, grpcResp interface{}) (in
 	if res.Error != nil {
 		return &pb.SetRouteRuleResponse{ErrorMes: res.Error.Error()}, res.Error
 	}
-	return &pb.RouteInfosResponse{}, nil
+	return &pb.SetRouteRuleResponse{}, nil
 }

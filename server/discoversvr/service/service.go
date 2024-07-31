@@ -51,7 +51,7 @@ func (s *DiscoverService) DiscoverServiceWithName(name string) ([]*pb.ServiceInf
 		}
 		serviceInfos = append(serviceInfos, serviceInfo)
 	}
-	return nil, nil
+	return serviceInfos, nil
 }
 
 // convertMapToServiceInfo 将 map[string]string 转换为 *pb.ServiceInfo

@@ -21,6 +21,7 @@ var dbPoolsMutex sync.RWMutex
 // 初始化数据库连接池
 // TODO:优化这个部分~高并发不会出现冲突+性能
 // TODO:优化快照读写~
+// TODO:分片个数配置化~
 func init() {
 	dbPools = make(map[int]*sql.DB)
 	for i := 0; i < 32; i++ { // 假设有 32 个分片
@@ -91,13 +92,23 @@ func hashStringToRange(s string, maxRange int) int {
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 
 	// 根据shardingkey选择分片
-	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange("", 8)
+	dbID := hashStringToRange(name, 4)<<3 + 0
+	endDBID := (hashStringToRange(name, 4)+1)<<3 + 0
 
-	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
-		name, strconv.FormatInt(int64(dbID), 2))
+	var res []*pb.RouteInfo
+	for i := dbID; i < endDBID; i++ {
+		config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
+			name, strconv.FormatInt(int64(dbID), 2))
+		tempRes, err := readFromDBWithName(i, name)
+		if err != nil {
+			config.Logger.Println("[Error][discover][mysql] readFromDBWithName Error: ", err)
+			return nil, err
+		}
+		res = append(res, tempRes...)
+	}
 
 	// TODO:后续改造~直接从mysql里面读
-	return readFromDBWithName(dbID, name)
+	return res, nil
 
 }
 
