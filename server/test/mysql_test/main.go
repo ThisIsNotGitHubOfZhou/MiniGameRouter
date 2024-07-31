@@ -1,10 +1,8 @@
-package database
+package main
 
 import (
 	"crypto/sha256"
 	"database/sql"
-	"discoversvr/config"
-	pb "discoversvr/proto"
 	"encoding/binary"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -34,37 +32,46 @@ func initDBPools() {
 	}
 }
 
-func WriteToMysql(info *pb.RouteInfo) error {
-	// 组合shardingKey:info.Name生成2位，info.Prefix生成三位，组合在一起生成五位
+type RouteInfo struct {
+	Name     string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Host     string `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	Port     string `protobuf:"bytes,3,opt,name=port,proto3" json:"port,omitempty"`
+	Prefix   string `protobuf:"bytes,4,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	Metadata string `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
+}
+
+func WriteToMysql(info *RouteInfo) error {
+	// 组合shardingKey:info.Name+info.Host+info.Port生成2位，info.Prefix生成三位，组合在一起生成五位
 
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(info.Name, 4)<<3 + hashStringToRange(info.Prefix, 8)
 
-	config.Logger.Printf("[Info][discover][mysql] WriteToMysql Name: %v, Prefix: %v, DB_ID: %v\n",
+	fmt.Printf("[Info][test][mysql] WriteToMysql Name: %v, Prefix: %v, DB_ID: %v\n",
 		info.Name, info.Prefix, strconv.FormatInt(int64(dbID), 2))
 
 	// 写入mysql
 	err := writeToDB(dbID, info)
 	if err != nil {
-		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
+		fmt.Printf("[Error][test][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
 	return nil
 }
 
 // writeToDB writes RouteInfo to the specified database shard
-func writeToDB(dbID int, info *pb.RouteInfo) error {
+func writeToDB(dbID int, info *RouteInfo) error {
 	db, ok := dbPools[dbID]
 	if !ok {
 		return fmt.Errorf("no database found for dbID %d", dbID)
 	}
 
+	// 使用 fmt.Sprintf 动态构建表名
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("INSERT INTO %s (name, host, port, prefix, metadata) VALUES (?, ?, ?, ?, ?)", tableName)
-	config.Logger.Printf("[Info][discover][mysql] 执行写入命令：%v\n", query)
+	fmt.Printf("[Info][discover][mysql] 执行写入命令：%v\n", query)
 	_, err := db.Exec(query, info.Name, info.Host, info.Port, info.Prefix, info.Metadata)
 	if err != nil {
-		config.Logger.Println("[Error][discover][mysql] 插入数据错误:", err)
+		fmt.Println("[Error][test][mysql] 插入数据错误:", err)
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
@@ -85,16 +92,73 @@ func hashStringToRange(s string, maxRange int) int {
 	return int(hashInt % uint32(maxRange))
 }
 
-func ReadFromMysql(info *pb.RouteInfo) error {
+func ReadFromMysql(info *RouteInfo) error {
 	// 组合shardingKey:info.Name+info.Host+info.Port生成2位，info.Prefix生成三位，组合在一起生成五位
 
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(info.Name+info.Host+info.Port, 4)<<3 + hashStringToRange(info.Prefix, 8)
 
-	config.Logger.Printf("[Info][discover][mysql] WriteToMysql Name: %v, Host: %v, Port: %v, Prefix: %v, DB_ID: %v",
+	fmt.Printf("[Info][discover][mysql] WriteToMysql Name: %v, Host: %v, Port: %v, Prefix: %v, DB_ID: %v",
 		info.Name, info.Host, info.Port, info.Prefix, strconv.FormatInt(int64(dbID), 2))
 
 	// 直接从mysql里面读？
 
 	return nil
+}
+
+func dropTable(index int) {
+	db, ok := dbPools[0]
+	if !ok {
+		return
+	}
+	for i := 0; i < index; i++ {
+		tableName := fmt.Sprintf("route_info%d", i)
+		query := fmt.Sprintf("DROP TABLE IF EXISTS %s ", tableName)
+		_, err := db.Exec(query)
+		if err != nil {
+			fmt.Println("[Error][test][mysql] 删除数据错误:", err)
+			continue
+		}
+	}
+}
+
+// 需要注意：需要有0号表！
+func copyTable(index int) {
+	db, ok := dbPools[0]
+	if !ok {
+		return
+	}
+	for i := 1; i < index; i++ {
+		tableName := fmt.Sprintf("route_info%d", i)
+		query := fmt.Sprintf("CREATE TABLE %s LIKE route_info0 ", tableName)
+		_, err := db.Exec(query)
+		if err != nil {
+			fmt.Println("[Error][test][mysql] 复制表错误:", err)
+			continue
+		}
+	}
+}
+
+func main() {
+	// 初始化 Logger
+
+	// 初始化数据库连接池
+	initDBPools()
+
+	// 示例 RouteInfo
+	info := &RouteInfo{
+		Name:     "exampleName",
+		Host:     "exampleHost",
+		Port:     "8080",
+		Prefix:   "examplePrefix",
+		Metadata: "{\n\"flag\":true\n}",
+	}
+
+	// 将 RouteInfo 写入 MySQL
+	WriteToMysql(info)
+
+	//dropTable(32)
+	//copyTable(32)
+
+	// 其他业务逻辑
 }
