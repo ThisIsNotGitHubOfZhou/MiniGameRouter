@@ -74,3 +74,17 @@ func (mw loggingMiddleware) GetRouteInfoWithPrefix(name string, prefix string) (
 	res, err = mw.Service.GetRouteInfoWithPrefix(name, prefix)
 	return
 }
+
+func (mw loggingMiddleware) SetRouteRule(info *pb.RouteInfo) (err error) {
+	defer func(begin time.Time) {
+		mw.logger.Log(
+			"function", "SetRouteRule",
+			"name", info.Name,
+			"prefix", info.Prefix,
+			"metadata", info.Metadata,
+			"took", time.Since(begin),
+		)
+	}(time.Now())
+	err = mw.Service.SetRouteRule(info)
+	return
+}

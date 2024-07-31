@@ -9,6 +9,7 @@ service DiscoverService {
   rpc DiscoverServiceWithID (DiscoverServiceWithIDRequest) returns (DiscoverServiceResponse) {}
   rpc GetRouteInfoWithName (GetRouteInfoWithNameRequest) returns (RouteInfosResponse) {}
   rpc GetRouteInfoWithPrefix (GetRouteInfoWithPrefixRequest) returns (RouteInfosResponse) {}
+  rpc SetRouteRule (RouteInfo) returns (SetRouteRuleResponse) {}
 }
 
 
@@ -54,7 +55,6 @@ message RouteInfosResponse{
 }
 
 
-
 message RouteInfo{
   string name = 1;
   string host = 2;
@@ -63,3 +63,6 @@ message RouteInfo{
   string metadata = 5;
 }
 
+message SetRouteRuleResponse{
+  string error_mes = 1;
+}

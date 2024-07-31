@@ -61,11 +61,15 @@ func main() {
 	getRouteInfoWithPrefixEnpt := endpoint.MakeGetRouteInfoWithPrefixEndpoint(svc)
 	//voteResult = kitzipkin.TraceEndpoint(config.ZipkinTracer, "voteResult-endpoint")(voteResult)
 
+	setRouteRuleEnpt := endpoint.MakeSetRouteRuleEndpoint(svc)
+	//voteResult = kitzipkin.TraceEndpoint(config.ZipkinTracer, "voteResult-endpoint")(voteResult)
+
 	endpoints := endpoint.DiscoverEndpoint{
 		DiscoverServiceWithName: discoverSvcWithNameEnpt,
 		DiscoverServiceWithID:   discoverSvcWithIDEnpt,
 		GetRouteInfoWithName:    getRouteInfoWithNameEnpt,
 		GetRouteInfoWithPrefix:  getRouteInfoWithPrefixEnpt,
+		SetRouteRule:            setRouteRuleEnpt,
 	}
 
 	// 定义transport层的trace

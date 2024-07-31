@@ -23,6 +23,7 @@ const (
 	DiscoverService_DiscoverServiceWithID_FullMethodName   = "/discover.DiscoverService/DiscoverServiceWithID"
 	DiscoverService_GetRouteInfoWithName_FullMethodName    = "/discover.DiscoverService/GetRouteInfoWithName"
 	DiscoverService_GetRouteInfoWithPrefix_FullMethodName  = "/discover.DiscoverService/GetRouteInfoWithPrefix"
+	DiscoverService_SetRouteRule_FullMethodName            = "/discover.DiscoverService/SetRouteRule"
 )
 
 // DiscoverServiceClient is the client API for DiscoverService service.
@@ -33,6 +34,7 @@ type DiscoverServiceClient interface {
 	DiscoverServiceWithID(ctx context.Context, in *DiscoverServiceWithIDRequest, opts ...grpc.CallOption) (*DiscoverServiceResponse, error)
 	GetRouteInfoWithName(ctx context.Context, in *GetRouteInfoWithNameRequest, opts ...grpc.CallOption) (*RouteInfosResponse, error)
 	GetRouteInfoWithPrefix(ctx context.Context, in *GetRouteInfoWithPrefixRequest, opts ...grpc.CallOption) (*RouteInfosResponse, error)
+	SetRouteRule(ctx context.Context, in *RouteInfo, opts ...grpc.CallOption) (*SetRouteRuleResponse, error)
 }
 
 type discoverServiceClient struct {
@@ -83,6 +85,16 @@ func (c *discoverServiceClient) GetRouteInfoWithPrefix(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *discoverServiceClient) SetRouteRule(ctx context.Context, in *RouteInfo, opts ...grpc.CallOption) (*SetRouteRuleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetRouteRuleResponse)
+	err := c.cc.Invoke(ctx, DiscoverService_SetRouteRule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DiscoverServiceServer is the server API for DiscoverService service.
 // All implementations must embed UnimplementedDiscoverServiceServer
 // for forward compatibility
@@ -91,6 +103,7 @@ type DiscoverServiceServer interface {
 	DiscoverServiceWithID(context.Context, *DiscoverServiceWithIDRequest) (*DiscoverServiceResponse, error)
 	GetRouteInfoWithName(context.Context, *GetRouteInfoWithNameRequest) (*RouteInfosResponse, error)
 	GetRouteInfoWithPrefix(context.Context, *GetRouteInfoWithPrefixRequest) (*RouteInfosResponse, error)
+	SetRouteRule(context.Context, *RouteInfo) (*SetRouteRuleResponse, error)
 	mustEmbedUnimplementedDiscoverServiceServer()
 }
 
@@ -109,6 +122,9 @@ func (UnimplementedDiscoverServiceServer) GetRouteInfoWithName(context.Context, 
 }
 func (UnimplementedDiscoverServiceServer) GetRouteInfoWithPrefix(context.Context, *GetRouteInfoWithPrefixRequest) (*RouteInfosResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRouteInfoWithPrefix not implemented")
+}
+func (UnimplementedDiscoverServiceServer) SetRouteRule(context.Context, *RouteInfo) (*SetRouteRuleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetRouteRule not implemented")
 }
 func (UnimplementedDiscoverServiceServer) mustEmbedUnimplementedDiscoverServiceServer() {}
 
@@ -195,6 +211,24 @@ func _DiscoverService_GetRouteInfoWithPrefix_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DiscoverService_SetRouteRule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RouteInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiscoverServiceServer).SetRouteRule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiscoverService_SetRouteRule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiscoverServiceServer).SetRouteRule(ctx, req.(*RouteInfo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DiscoverService_ServiceDesc is the grpc.ServiceDesc for DiscoverService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -217,6 +251,10 @@ var DiscoverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRouteInfoWithPrefix",
 			Handler:    _DiscoverService_GetRouteInfoWithPrefix_Handler,
+		},
+		{
+			MethodName: "SetRouteRule",
+			Handler:    _DiscoverService_SetRouteRule_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

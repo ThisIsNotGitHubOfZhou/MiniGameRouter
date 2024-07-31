@@ -15,6 +15,7 @@ type GrpcServer struct {
 	discoverServiceWithID                 grpctransport.Handler
 	getRouteInfoWithName                  grpctransport.Handler
 	getRouteInfoWithPrefix                grpctransport.Handler
+	setRouteRule                          grpctransport.Handler
 	pb.UnimplementedDiscoverServiceServer // 嵌入未实现的服务，新版grpc需要
 }
 
@@ -44,6 +45,11 @@ func NewGRPCServer(edp endpoint.DiscoverEndpoint) *GrpcServer {
 			edp.GetRouteInfoWithPrefix,
 			decodeGRPCGetRouteInfoWithPrefixRequest,
 			encodeGRPCGetRouteInfoWithPrefixResponse,
+		),
+		setRouteRule: grpctransport.NewServer(
+			edp.SetRouteRule,
+			decodeGRPCSetRouteRuleRequest,
+			encodeGRPCSetRouteRuleResponse,
 		),
 	}
 }
@@ -201,4 +207,44 @@ func encodeGRPCGetRouteInfoWithPrefixResponse(_ context.Context, grpcResp interf
 		return &pb.RouteInfosResponse{Routes: res.Routes, ErrorMes: res.Error.Error()}, res.Error
 	}
 	return &pb.RouteInfosResponse{Routes: res.Routes}, nil
+}
+
+// 实现 gRPC 投票结果服务接口
+func (s *GrpcServer) SetRouteRule(ctx context.Context, req *pb.RouteInfo) (*pb.SetRouteRuleResponse, error) {
+	_, resp, err := s.setRouteRule.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*pb.SetRouteRuleResponse), nil
+}
+
+// 请求解码器 转换成rpc请求
+func decodeGRPCSetRouteRuleRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	res, ok := grpcReq.(*pb.RouteInfo)
+
+	if !ok {
+		return nil, fmt.Errorf("decodeGRPCSetRouteRuleRequest invalid request type: %T", grpcReq)
+	}
+
+	req := endpoint.SetRouteRuleRequest{
+		Name:     res.Name,
+		Host:     res.Host,
+		Port:     res.Port,
+		Prefix:   res.Prefix,
+		Metadata: res.Metadata,
+	}
+
+	return req, nil
+}
+
+// 响应编码器
+func encodeGRPCSetRouteRuleResponse(_ context.Context, grpcResp interface{}) (interface{}, error) {
+	res, ok := grpcResp.(endpoint.SetRouteRuleResponse)
+	if !ok {
+		return nil, fmt.Errorf("encodeGRPCSetRouteRuleResponse invalid response type: %T", grpcResp)
+	}
+	if res.Error != nil {
+		return &pb.SetRouteRuleResponse{ErrorMes: res.Error.Error()}, res.Error
+	}
+	return &pb.RouteInfosResponse{}, nil
 }
