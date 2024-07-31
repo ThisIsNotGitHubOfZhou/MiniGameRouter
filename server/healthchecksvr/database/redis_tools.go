@@ -37,7 +37,6 @@ func DeRegisterServiceInstance(client *redis.Client, instanceID string) {
 	}
 }
 
-// TODO:如果启用记得打日志~
 // 发现服务实例
 func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string, error) {
 	keys, err := client.Keys(ctx, pattern).Result()

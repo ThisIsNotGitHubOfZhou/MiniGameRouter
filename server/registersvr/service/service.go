@@ -10,7 +10,6 @@ import (
 type Service interface {
 	// 将服务实例注册到服务器上
 	// metadata需要保证是键值对！
-	// TODO:服务实例ID是应该int 还是 string？
 	Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error)
 
 	// 将服务实例删除
@@ -24,8 +23,6 @@ type ServiceMiddleware func(Service) Service
 type RegisterService struct{}
 
 var _ Service = (*RegisterService)(nil)
-
-// TODO：暂时用name当作redis键
 
 // TODO：200ms一次？需要优化一下？？
 func (s *RegisterService) Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error) {

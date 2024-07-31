@@ -29,7 +29,6 @@ func DeRegisterServiceInstance(client *redis.Client, instanceID string) error {
 	return client.Del(ctx, instanceID).Err()
 }
 
-// TODO:使用下面函数记得写好log
 // 续约服务实例
 func RenewServiceInstance(client *redis.Client, instanceID string, ttl time.Duration) {
 
