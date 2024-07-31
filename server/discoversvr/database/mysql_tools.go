@@ -50,6 +50,7 @@ func WriteToMysql(info *pb.RouteInfo) error {
 		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
+	// TODO：发布数据更新事件，然后每个server都去监听相关service的事件，有的话就更新本地的redis，缓存~
 	return nil
 }
 
