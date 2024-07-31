@@ -2,7 +2,10 @@ package service
 
 import (
 	"discoversvr/config"
+	"discoversvr/database"
 	pb "discoversvr/proto"
+	"fmt"
+	"strconv"
 )
 
 type Service interface {
@@ -18,37 +21,80 @@ type Service interface {
 	// 根据服务名+前缀返回路由
 	GetRouteInfoWithPrefix(name string, prefix string) ([]*pb.RouteInfo, error)
 
-	// TODO:设置前缀路由
-	// TODO:设置定向路由
+	// 前缀路由(prefix)or定向路由(metadata)
+	SetRouteRule(*pb.RouteInfo) error
 }
 
 // 定义中间键服务
 type ServiceMiddleware func(Service) Service
 
 type DiscoverService struct {
-	routeInfoCache map[string]pb.RouteInfo // 存储RoutInfo
-	routeDirty     map[string]bool         // route信息是否dirty
+	routeInfoCache map[string]*pb.RouteInfo // 存储RoutInfo
+	routeDirty     map[string]bool          // route信息是否dirty，方便后续
 }
 
 var _ Service = (*DiscoverService)(nil)
 
 func (s *DiscoverService) DiscoverServiceWithName(name string) ([]*pb.ServiceInfo, error) {
-	config.Logger.Println("[Info][discover] DiscoverServiceWithName begin")
+	config.Logger.Println("[Info][discover] DiscoverServiceWithName begin", name)
+	rawData, err := database.DiscoverServices(config.RedisClient, name)
+	if err != nil {
+		config.Logger.Println("[Error][discover] DiscoverServiceWithName error with redis:", err)
 
+	}
+	var serviceInfos []*pb.ServiceInfo
+	for _, item := range rawData {
+		serviceInfo, err := convertMapToServiceInfo(item)
+		if err != nil {
+			return nil, err
+		}
+		serviceInfos = append(serviceInfos, serviceInfo)
+	}
 	return nil, nil
 }
 
+// convertMapToServiceInfo 将 map[string]string 转换为 *pb.ServiceInfo
+// 需要跟registersvr对齐~
+func convertMapToServiceInfo(data map[string]string) (*pb.ServiceInfo, error) {
+	weight, err := strconv.ParseInt(data["weight"], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid weight: %v", err)
+	}
+
+	timeout, err := strconv.ParseInt(data["timeout"], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid timeout: %v", err)
+	}
+
+	return &pb.ServiceInfo{
+		ServiceName: data["service_name"],
+		InstanceId:  data["instance_id"],
+		Host:        data["host"],
+		Port:        data["port"],
+		Protocol:    data["protocol"],
+		Weight:      weight,
+		Timeout:     timeout,
+		Metadata:    data["metadata"],
+	}, nil
+}
+
 func (s *DiscoverService) DiscoverServiceWithID(instanceID string) ([]*pb.ServiceInfo, error) {
-	config.Logger.Println("[Info][discover] DiscoverServiceWithID begin")
-	return nil, nil
+	config.Logger.Println("[Info][discover] DiscoverServiceWithID begin:", instanceID)
+	// 直接复用
+	return s.DiscoverServiceWithName(instanceID)
 }
 
 func (s *DiscoverService) GetRouteInfoWithName(name string) ([]*pb.RouteInfo, error) {
 	config.Logger.Println("[Info][discover] GetRouteInfoWithName begin")
-	return nil, nil
+	return database.ReadFromMysqlWithName(name)
 }
 
 func (s *DiscoverService) GetRouteInfoWithPrefix(name string, prefix string) ([]*pb.RouteInfo, error) {
 	config.Logger.Println("[Info][discover] GetRouteInfoWithPrefix begin")
-	return nil, nil
+	return database.ReadFromMysqlWithPrefix(name, prefix)
+}
+
+func (s *DiscoverService) SetRouteRule(info *pb.RouteInfo) error {
+	config.Logger.Println("[Info][discover] SetRouteRule begin")
+	return database.WriteToMysql(info)
 }

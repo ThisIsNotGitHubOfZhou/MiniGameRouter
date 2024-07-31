@@ -13,6 +13,7 @@ type DiscoverEndpoint struct {
 	DiscoverServiceWithID   endpoint.Endpoint
 	GetRouteInfoWithName    endpoint.Endpoint
 	GetRouteInfoWithPrefix  endpoint.Endpoint
+	SetRouteRule            endpoint.Endpoint
 }
 
 // 定义服务的请求和返回
@@ -105,5 +106,39 @@ func MakeGetRouteInfoWithPrefixEndpoint(svc service.Service) endpoint.Endpoint {
 		routes, err := svc.GetRouteInfoWithPrefix(req.Name, req.Prefix)
 
 		return GetRouteInfoWithPrefixResponse{Routes: routes, Error: err}, nil
+	}
+}
+
+// 定义服务的请求和返回
+type SetRouteRuleRequest struct {
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Prefix   string `json:"prefix"`
+	Metadata string `json:"metadata"`
+}
+
+type SetRouteRuleResponse struct {
+	Error error `json:"error"`
+}
+
+// 定义创建edpt
+func MakeSetRouteRuleEndpoint(svc service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		// 请求转换成endpoint层的请求
+		req_ := request.(SetRouteRuleRequest)
+
+		req := &pb.RouteInfo{
+			Name:     req_.Name,
+			Host:     req_.Host,
+			Port:     req_.Port,
+			Prefix:   req_.Prefix,
+			Metadata: req_.Metadata,
+		}
+
+		// 调用service层服务
+		err := svc.SetRouteRule(req)
+
+		return SetRouteRuleResponse{Error: err}, nil
 	}
 }
