@@ -7,7 +7,6 @@ import (
 
 type Service interface {
 	// 根据服务名发现
-	// TODO:返回服务实例
 	DiscoverServiceWithName(name string) ([]*pb.ServiceInfo, error)
 
 	// 根据服务InstanceID返回
@@ -18,6 +17,9 @@ type Service interface {
 
 	// 根据服务名+前缀返回路由
 	GetRouteInfoWithPrefix(name string, prefix string) ([]*pb.RouteInfo, error)
+
+	// TODO:设置前缀路由
+	// TODO:设置定向路由
 }
 
 // 定义中间键服务
@@ -25,6 +27,7 @@ type ServiceMiddleware func(Service) Service
 
 type DiscoverService struct {
 	routeInfoCache map[string]pb.RouteInfo // 存储RoutInfo
+	routeDirty     map[string]bool         // route信息是否dirty
 }
 
 var _ Service = (*DiscoverService)(nil)
