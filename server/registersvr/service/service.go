@@ -39,11 +39,23 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 		"metadata":     metadata,
 	}
 	config.Logger.Printf("[Info][register] 注册实例,名称：%v，信息：%v\n", name, instanceInfo)
-	err := database.RegisterServiceInstance(config.RedisClient, instanceInfo["instance_id"].(string), instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
-	if err != nil {
-		config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
-		return "", err
-	}
+
+	// 异步不处理错误版
+	go func() {
+		err := database.RegisterServiceInstance(config.RedisClient, instanceInfo["instance_id"].(string), instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
+		if err != nil {
+			config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
+		}
+	}()
+
+	// 原始同步版（有问题后启用）~~~~~~~~~~~~~~~~~~~~~~
+	// TODO:or设置一个开关？？
+	//err := database.RegisterServiceInstance(config.RedisClient, instanceInfo["instance_id"].(string), instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
+	//if err != nil {
+	//	config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
+	//	return "", err
+	//}
+	// ~~~~~~~~~~~~~~
 	return instanceInfo["instance_id"].(string), nil
 }
 
@@ -60,10 +72,20 @@ func (s *RegisterService) Deregister(id, name, host, port string) error {
 		config.Logger.Printf("[Error][register] 服务实例ID: %v与生成不一样：%v\n", id, generateInstanceID(name, host, port))
 		return fmt.Errorf("服务实例ID: %v与生成不一样：%v", id, generateInstanceID(name, host, port))
 	}
+
+	go func() {
+		err := database.DeRegisterServiceInstance(config.RedisClient, id)
+		if err != nil {
+			config.Logger.Println("[Error][register] database.DeRegisterServiceInstance 出错:", err)
+		}
+	}()
+
+	// 原始同步版（异步出错后启用）~~~~~~~~~~~~~~~~~
 	err := database.DeRegisterServiceInstance(config.RedisClient, id)
 	if err != nil {
 		config.Logger.Println("[Error][register] database.DeRegisterServiceInstance 出错:", err)
 		return err
 	}
+	// ~~~~~~~~~~~~~~~~~~~
 	return nil
 }

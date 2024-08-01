@@ -23,7 +23,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 
 	}()
 
-	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
+	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure()) // TODO:需要从连接池里面哪吗？
 	if err != nil {
 		return err
 	}
@@ -76,12 +76,25 @@ func decodeGRPCHealthCheckSResponse(_ context.Context, response interface{}) (in
 func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string, timeout int) error {
 
 	go func() {
-		conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
+		// 轮询服务
+		c.healthCheckLock.Lock()
+		c.healthCheckFlag++
+		tempFlag := c.registerFlag
+		c.healthCheckLock.Unlock()
+
+		if len(c.HealthCheckGRPCPools) == 0 {
+			fmt.Println("[Error][sdk] HealthCheckGRPCPools为空")
+			return
+		}
+		conn, err := c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Get() // 优化后
+		defer c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Put(conn)
+
+		//conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("[Error][sdk] gprc连接问题：", err)
 			return
 		}
-		defer conn.Close()
+		//defer conn.Close()
 
 		//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 

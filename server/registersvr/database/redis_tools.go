@@ -12,6 +12,9 @@ var ctx = context.Background()
 // 注册服务实例
 func RegisterServiceInstance(client *redis.Client, instanceID string, instanceInfo map[string]interface{}, ttl time.Duration) error {
 	// 使用HMSet存储服务实例信息
+	// TODO:下面有用吗？
+	//ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	//defer cancel()
 	config.Logger.Printf("[Info][register] 注册实例database.RegisterServiceInstance,名称：%v，\n", instanceID)
 	err := client.HMSet(ctx, instanceID, instanceInfo).Err()
 	if err != nil {

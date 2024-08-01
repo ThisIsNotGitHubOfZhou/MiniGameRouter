@@ -5,16 +5,27 @@ import (
 	"fmt"
 	registerpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/register"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
-	"google.golang.org/grpc"
 )
 
 func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
 	fmt.Println("[Info][sdk] Register，注册服务:", name)
-	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.registerLock.Lock()
+	c.registerFlag++
+	tempFlag := c.registerFlag
+	c.registerLock.Unlock()
+
+	if len(c.RegisterGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] RegisterGRPCPools为空")
+		return "", fmt.Errorf("RegisterGRPCPools empty")
+	}
+	conn, err := c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Get() // 优化后
+	defer c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Put(conn)
+
+	// conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close()
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
@@ -86,11 +97,22 @@ func decodeGRPCRegisterResponse(_ context.Context, response interface{}) (interf
 
 func (c *MiniClient) DeRegister(ctx context.Context, id, name, host, port string) error {
 	fmt.Println("[Info][sdk] DeRegister，删除服务:", id, name)
-	conn, err := grpc.Dial(RegisteGrpcrHost+":"+RegisterGrpcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.registerLock.Lock()
+	c.registerFlag++
+	tempFlag := c.registerFlag
+	c.registerLock.Unlock()
+
+	if len(c.RegisterGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] RegisterGRPCPools为空")
+		return fmt.Errorf("RegisterGRPCPools empty")
+	}
+	conn, err := c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Get()
+	defer c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Put(conn)
+
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
