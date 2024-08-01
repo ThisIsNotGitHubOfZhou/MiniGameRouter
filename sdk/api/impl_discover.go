@@ -5,17 +5,28 @@ import (
 	"fmt"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
-	"google.golang.org/grpc"
 )
 
+// TODO：后面别使用轮询了
 // 根据服务名发现
 func (c *MiniClient) DiscoverServiceWithName(ctx context.Context, name string) ([]*discoverpb.ServiceInfo, error) {
 	fmt.Println("[Info][sdk] DiscoverServiceWithName，发现服务:", name)
-	conn, err := grpc.Dial(DiscoverGrpcHost+":"+DiscoverGprcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return nil, fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	//defer conn.Close()
 
 	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	var ep = grpctransport.NewClient(
@@ -57,11 +68,21 @@ func decodeGRPCDiscoverServiceWithNameResponse(_ context.Context, response inter
 // 根据服务InstanceID返回
 func (c *MiniClient) DiscoverServiceWithID(ctx context.Context, instanceID string) ([]*discoverpb.ServiceInfo, error) {
 	fmt.Println("[Info][sdk] DiscoverServiceWithID，发现服务:", instanceID)
-	conn, err := grpc.Dial(DiscoverGrpcHost+":"+DiscoverGprcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return nil, fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	var ep = grpctransport.NewClient(
@@ -80,7 +101,7 @@ func (c *MiniClient) DiscoverServiceWithID(ctx context.Context, instanceID strin
 	}
 	response, err := ep(ctx, request)
 	if err != nil {
-		fmt.Println("sdk_api_impl_Register grpc error", err)
+		fmt.Println("[Error][sdk] DiscoverServiceWithID grpc error", err)
 		return nil, err
 	}
 	r := response.(*discoverpb.DiscoverServiceResponse)
@@ -103,12 +124,22 @@ func decodeGRPCDiscoverServiceWithIDResponse(_ context.Context, response interfa
 
 // 根据服务名返回路由
 func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*discoverpb.RouteInfo, error) {
-	fmt.Println("[Info][sdk] Register，注册服务:", name)
-	conn, err := grpc.Dial(DiscoverGrpcHost+":"+DiscoverGprcPort, grpc.WithInsecure())
+	fmt.Println("[Info][sdk] GetRouteInfoWithName，获取路由:", name)
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return nil, fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
@@ -134,9 +165,9 @@ func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*
 	}
 	r := response.(*discoverpb.RouteInfosResponse)
 
-	fmt.Println("[Info][sdk]  DiscoverServiceWithID 结果", r)
+	fmt.Println("[Info][sdk]  GetRouteInfoWithName 结果", r)
 	if r.ErrorMes != "" {
-		fmt.Println("[Info][sdk]  DiscoverServiceWithID error", r.ErrorMes)
+		fmt.Println("[Info][sdk]  GetRouteInfoWithName error", r.ErrorMes)
 	}
 	return r.Routes, nil
 }
@@ -153,11 +184,21 @@ func decodeGRPCGetRouteInfoWithNameResponse(_ context.Context, response interfac
 // 根据服务名+前缀返回路由
 func (c *MiniClient) GetRouteInfoWithPrefix(ctx context.Context, name string, prefix string) ([]*discoverpb.RouteInfo, error) {
 	fmt.Println("[Info][sdk] GetRouteInfoWithPrefix，发现路由:", name)
-	conn, err := grpc.Dial(DiscoverGrpcHost+":"+DiscoverGprcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return nil, fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
@@ -184,9 +225,9 @@ func (c *MiniClient) GetRouteInfoWithPrefix(ctx context.Context, name string, pr
 	}
 	r := response.(*discoverpb.RouteInfosResponse)
 
-	fmt.Println("[Info][sdk]  DiscoverServiceWithID 结果", r)
+	fmt.Println("[Info][sdk]  GetRouteInfoWithPrefix 结果", r)
 	if r.ErrorMes != "" {
-		fmt.Println("[Info][sdk]  DiscoverServiceWithID error", r.ErrorMes)
+		fmt.Println("[Info][sdk]  GetRouteInfoWithPrefix error", r.ErrorMes)
 	}
 	return r.Routes, nil
 }
@@ -203,11 +244,21 @@ func decodeGRPCGetRouteInfoWithPrefixResponse(_ context.Context, response interf
 // 前缀路由(prefix)or定向路由(metadata)
 func (c *MiniClient) SetRouteRule(ctx context.Context, info *discoverpb.RouteInfo) error {
 	fmt.Println("[Info][sdk] SetRouteRule，設置路由:", info)
-	conn, err := grpc.Dial(DiscoverGrpcHost+":"+DiscoverGprcPort, grpc.WithInsecure())
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
 
@@ -232,14 +283,14 @@ func (c *MiniClient) SetRouteRule(ctx context.Context, info *discoverpb.RouteInf
 	}
 	response, err := ep(ctx, request)
 	if err != nil {
-		fmt.Println("[Error][sdk] GetRouteInfoWithPrefix grpc error", err)
+		fmt.Println("[Error][sdk] SetRouteRule grpc error", err)
 		return err
 	}
 	r := response.(*discoverpb.SetRouteRuleResponse)
 
-	fmt.Println("[Info][sdk]  DiscoverServiceWithID 结果", r)
+	fmt.Println("[Info][sdk]  SetRouteRule 结果", r)
 	if r.ErrorMes != "" {
-		fmt.Println("[Info][sdk]  DiscoverServiceWithID error", r.ErrorMes)
+		fmt.Println("[Info][sdk]  SetRouteRule error", r.ErrorMes)
 		return fmt.Errorf(r.ErrorMes)
 	}
 	return nil

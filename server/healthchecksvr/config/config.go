@@ -5,6 +5,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"log"
 	"os"
+	"time"
 
 	kitlog "github.com/go-kit/log"
 )
@@ -44,10 +45,13 @@ func init() {
 	// 解析命令行标志
 	flag.Parse()
 
+	// TODO:配置化
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     "21.6.163.18:6380", // Redis 地址
-		Password: "664597599Zcf!",    // Redis 密码，没有则留空
-		DB:       0,                  // 使用的数据库，默认为0
+		Addr:        "21.6.163.18:6380", // Redis 地址
+		Password:    "664597599Zcf!",    // Redis 密码，没有则留空
+		DB:          0,                  // 使用的数据库，默认为0
+		PoolSize:    3000,               // 连接池大小
+		PoolTimeout: 20 * time.Second,   //连接池等待时间
 	})
 
 }

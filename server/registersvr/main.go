@@ -101,7 +101,11 @@ func main() {
 	}()
 
 	error := <-errChan
-
+	config.Logger.Println("[Info][register] redis连接池关闭")
+	err := config.RedisClient.Close()
+	if err != nil {
+		config.Logger.Println("[Info][register] redis连接池关闭出错", err)
+	}
 	config.Logger.Println(error)
 
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"log"
 	"time"
 )
 
@@ -57,6 +58,33 @@ func discoverServices(client *redis.Client, pattern string) ([]map[string]string
 	return services, nil
 }
 
+func flushAll(client *redis.Client) {
+	// 使用 SCAN 命令逐步扫描键
+	var cursor uint64
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = client.Scan(ctx, cursor, "*", 100).Result()
+		if err != nil {
+			log.Fatalf("Failed to scan keys: %v", err)
+		}
+
+		if len(keys) > 0 {
+			// 使用 DEL 命令删除扫描到的键
+			if err := client.Del(ctx, keys...).Err(); err != nil {
+				log.Fatalf("Failed to delete keys: %v", err)
+			}
+		}
+
+		// 如果 cursor 为 0，表示扫描结束
+		if cursor == 0 {
+			break
+		}
+	}
+
+	log.Println("All keys in the current database have been deleted.")
+}
+
 func main() {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "21.6.163.18:6380", // Redis 地址
@@ -64,38 +92,41 @@ func main() {
 		DB:       0,                  // 使用的数据库，默认为0
 	})
 
-	instanceID := "instance_1"
-	instanceInfo := map[string]interface{}{
-		"service":  "my_service",
-		"host":     "127.0.0.1",
-		"port":     8080,
-		"protocol": "http",
-		"weight":   10,
-		"healthy":  true,
-		"metadata": `{"version": "1.0", "region": "us-east"}`,
-	}
-	ttl := 10 * time.Second
+	// instanceID := "instance_1"
+	// instanceInfo := map[string]interface{}{
+	// 	"service":  "my_service",
+	// 	"host":     "127.0.0.1",
+	// 	"port":     8080,
+	// 	"protocol": "http",
+	// 	"weight":   10,
+	// 	"healthy":  true,
+	// 	"metadata": `{"version": "1.0", "region": "us-east"}`,
+	// }
+	// ttl := 10 * time.Second
 
-	// 注册服务实例
-	err := registerServiceInstance(client, instanceID, instanceInfo, ttl)
-	if err != nil {
-		fmt.Println("Failed to register service instance:", err)
-		return
-	}
-	fmt.Println("Service instance registered successfully")
+	// // 注册服务实例
+	// err := registerServiceInstance(client, instanceID, instanceInfo, ttl)
+	// if err != nil {
+	// 	fmt.Println("Failed to register service instance:", err)
+	// 	return
+	// }
+	// fmt.Println("Service instance registered successfully")
 
-	// 启动续约协程
-	go renewServiceInstance(client, instanceID, ttl)
+	// // 启动续约协程
+	// go renewServiceInstance(client, instanceID, ttl)
 
-	// 模拟服务发现
-	time.Sleep(5 * time.Second)
-	services, err := discoverServices(client, "instance_*")
-	if err != nil {
-		fmt.Println("Failed to discover services:", err)
-	} else {
-		fmt.Println("Discovered services:", services)
-	}
+	// // 模拟服务发现
+	// time.Sleep(5 * time.Second)
+	// services, err := discoverServices(client, "instance_*")
+	// if err != nil {
+	// 	fmt.Println("Failed to discover services:", err)
+	// } else {
+	// 	fmt.Println("Discovered services:", services)
+	// }
 
 	// 保持主函数运行
-	select {}
+	//select {}
+
+	// 删除redis所有键
+	flushAll(client)
 }
