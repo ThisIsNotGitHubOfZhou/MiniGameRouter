@@ -107,8 +107,8 @@ func (c *MiniClient) DeRegister(ctx context.Context, id, name, host, port string
 		fmt.Println("[Error][sdk] RegisterGRPCPools为空")
 		return fmt.Errorf("RegisterGRPCPools empty")
 	}
-	conn, err := c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterServerInfo)))].Get()
-	defer c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterServerInfo)))].Put(conn)
+	conn, err := c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Get()
+	defer c.RegisterGRPCPools[tempFlag%(int64(len(c.RegisterGRPCPools)))].Put(conn)
 
 	if err != nil {
 		return err
