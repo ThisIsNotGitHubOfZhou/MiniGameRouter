@@ -10,6 +10,7 @@ import (
 )
 
 // 服务注册测试并发
+// TODO:8.1 30s5w
 func TestRegisterFunction(t *testing.T) {
 	var wg sync.WaitGroup
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)

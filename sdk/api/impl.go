@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/tools"
 	"sync"
@@ -40,6 +41,11 @@ type MiniClient struct {
 	DiscoverGRPCPools  []*tools.GRPCPool
 	discoverLock       sync.Mutex
 	discoverPoolSize   int
+
+	// TODO:缓存
+	routeCacheMu  sync.RWMutex
+	cache         map[string][]*discoverpb.RouteInfo // service到路由信息组的
+	prefixToIndex map[string][]int                   // service+前缀到下标的映射
 }
 
 var _ service.RegisterService = (*MiniClient)(nil)
@@ -47,6 +53,8 @@ var _ service.RegisterService = (*MiniClient)(nil)
 var _ service.DiscoverService = (*MiniClient)(nil)
 
 var _ service.HealthCheckService = (*MiniClient)(nil)
+
+var _ service.RouteAlgorithm = (*MiniClient)(nil)
 
 func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout int) *MiniClient {
 	return &MiniClient{
@@ -62,7 +70,7 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 		healthCheckFlag:     0,
 		healthCheckPoolSize: 500,
 		discoverFlag:        0,
-		discoverPoolSize:    500,
+		discoverPoolSize:    1000,
 	}
 }
 
@@ -71,7 +79,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	// TODO:注意RegisterServerInfo要被初始化！
 	if c.RegisterServerInfo == nil {
 		fmt.Println("[Error][sdk] RegisterServerInfo没有初始化~")
-		return fmt.Errorf("RegisterServerInfo not init")
+		//return fmt.Errorf("RegisterServerInfo not init")
 	}
 	for i := 0; i < len(c.RegisterServerInfo); i++ {
 		tool, err := tools.NewGRPCPool(c.RegisterServerInfo[i], c.registerPoolSize)
@@ -86,7 +94,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	// TODO:注意HealthCheckServerInfo要被初始化！
 	if c.HealthCheckServerInfo == nil {
 		fmt.Println("[Error][sdk] HealthCheckServerInfo没有初始化~")
-		return fmt.Errorf("HealthCheckServerInfo not init")
+		//return fmt.Errorf("HealthCheckServerInfo not init")
 	}
 	for i := 0; i < len(c.HealthCheckServerInfo); i++ {
 		tool, err := tools.NewGRPCPool(c.HealthCheckServerInfo[i], c.healthCheckPoolSize)
@@ -101,7 +109,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	// TODO:注意DiscoverServerInfo要被初始化！
 	if c.DiscoverServerInfo == nil {
 		fmt.Println("[Error][sdk] DiscoverServerInfo没有初始化~")
-		return fmt.Errorf("DiscoverServerInfo not init")
+		//return fmt.Errorf("DiscoverServerInfo not init")
 	}
 	for i := 0; i < len(c.DiscoverServerInfo); i++ {
 		tool, err := tools.NewGRPCPool(c.DiscoverServerInfo[i], c.discoverPoolSize)
@@ -113,6 +121,12 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	}
 
 	return nil
+}
+
+// cache同步线程
+func (c *MiniClient) syncCache() {
+	// TODO: 同步cache
+	// 利用stream流实现
 }
 
 func (c *MiniClient) Close() {
