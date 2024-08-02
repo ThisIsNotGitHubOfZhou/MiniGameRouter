@@ -16,6 +16,7 @@ type GrpcServer struct {
 	getRouteInfoWithName                  grpctransport.Handler
 	getRouteInfoWithPrefix                grpctransport.Handler
 	setRouteRule                          grpctransport.Handler
+	syncRoutesEndpoint                    grpctransport.Handler
 	pb.UnimplementedDiscoverServiceServer // 嵌入未实现的服务，新版grpc需要
 }
 
@@ -50,6 +51,11 @@ func NewGRPCServer(edp endpoint.DiscoverEndpoint) *GrpcServer {
 			edp.SetRouteRule,
 			decodeGRPCSetRouteRuleRequest,
 			encodeGRPCSetRouteRuleResponse,
+		),
+		syncRoutesEndpoint: grpctransport.NewServer(
+			edp.SyncRoutesEndpoint,
+			decodeGRPCSyncRoutesRequest,
+			encodeGRPCSyncRoutesResponse,
 		),
 	}
 }
@@ -109,7 +115,7 @@ func (s *GrpcServer) DiscoverServiceWithID(ctx context.Context, req *pb.Discover
 	return resp.(*pb.DiscoverServiceResponse), nil
 }
 
-// 请求解码器 转换成rpc请求
+// 请求解码器 rpc请求转换成endpoint层请求
 func decodeGRPCDiscoverServiceWithIDRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	res, ok := grpcReq.(*pb.DiscoverServiceWithIDRequest)
 
@@ -145,7 +151,7 @@ func (s *GrpcServer) GetRouteInfoWithName(ctx context.Context, req *pb.GetRouteI
 	return resp.(*pb.RouteInfosResponse), nil
 }
 
-// 请求解码器 转换成rpc请求
+// 请求解码器 rpc请求转换成endpoint层请求
 func decodeGRPCGetRouteInfoWithNameRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	res, ok := grpcReq.(*pb.GetRouteInfoWithNameRequest)
 
@@ -181,7 +187,7 @@ func (s *GrpcServer) GetRouteInfoWithPrefix(ctx context.Context, req *pb.GetRout
 	return resp.(*pb.RouteInfosResponse), nil
 }
 
-// 请求解码器 转换成rpc请求
+// 请求解码器 rpc请求转换成endpoint层请求
 func decodeGRPCGetRouteInfoWithPrefixRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	res, ok := grpcReq.(*pb.GetRouteInfoWithPrefixRequest)
 
@@ -218,7 +224,7 @@ func (s *GrpcServer) SetRouteRule(ctx context.Context, req *pb.RouteInfo) (*pb.S
 	return resp.(*pb.SetRouteRuleResponse), nil
 }
 
-// 请求解码器 转换成rpc请求
+// 请求解码器 rpc请求转换成endpoint层请求
 func decodeGRPCSetRouteRuleRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	res, ok := grpcReq.(*pb.RouteInfo)
 
@@ -247,4 +253,22 @@ func encodeGRPCSetRouteRuleResponse(_ context.Context, grpcResp interface{}) (in
 		return &pb.SetRouteRuleResponse{ErrorMes: res.Error.Error()}, res.Error
 	}
 	return &pb.SetRouteRuleResponse{}, nil
+}
+
+// 实现 gRPC 投票结果服务接口
+func (s *GrpcServer) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
+	ctx := context.WithValue(stream.Context(), "stream", stream)
+	_, _, err := s.syncRoutesEndpoint.ServeGRPC(ctx, req)
+	return err
+}
+
+// 请求解码器 rpc请求转换成endpoint层请求
+func decodeGRPCSyncRoutesRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.RouteSyncRequest)
+	return req, nil
+}
+
+// 响应编码器
+func encodeGRPCSyncRoutesResponse(_ context.Context, grpcResp interface{}) (interface{}, error) {
+	return grpcResp, nil
 }

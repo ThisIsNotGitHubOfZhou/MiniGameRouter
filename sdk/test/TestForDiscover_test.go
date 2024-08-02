@@ -27,11 +27,11 @@ func randomString(length int, rng *rand.Rand, mu *sync.Mutex) string { //加锁�
 	return string(result)
 }
 
-// TODO：
 // TODO 8_2 300s 100w,并行
 // TODO 8_2 30s 10w，并行
 // TODO:数据打到数据库不均匀~
 // TODO:这里只能线性，不线性randomString会出现很多重复
+// TODO:线性会出错~
 
 func TestDiscoverFunction(t *testing.T) {
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)

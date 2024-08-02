@@ -10,6 +10,7 @@ service DiscoverService {
   rpc GetRouteInfoWithName (GetRouteInfoWithNameRequest) returns (RouteInfosResponse) {}
   rpc GetRouteInfoWithPrefix (GetRouteInfoWithPrefixRequest) returns (RouteInfosResponse) {}
   rpc SetRouteRule (RouteInfo) returns (SetRouteRuleResponse) {}
+  rpc SyncRoutes(RouteSyncRequest) returns (stream RouteInfo) {}
 }
 
 
@@ -65,4 +66,9 @@ message RouteInfo{
 
 message SetRouteRuleResponse{
   string error_mes = 1;
+}
+
+message RouteSyncRequest{
+  repeated string name = 1; // 需要同步的服务路由
+  repeated string namePrefix = 2; // 需要同步的前缀+name路由
 }
