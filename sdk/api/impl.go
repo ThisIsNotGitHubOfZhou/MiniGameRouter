@@ -123,12 +123,6 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	return nil
 }
 
-// cache同步线程
-func (c *MiniClient) syncCache() {
-	// TODO: 同步cache
-	// 利用stream流实现
-}
-
 func (c *MiniClient) Close() {
 	for i := 0; i < len(c.RegisterGRPCPools); i++ {
 		c.RegisterGRPCPools[i].Close()

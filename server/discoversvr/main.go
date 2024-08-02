@@ -6,6 +6,7 @@ import (
 	"discoversvr/plugins"
 	pb "discoversvr/proto"
 	"discoversvr/service"
+	"discoversvr/tools"
 	"discoversvr/transport"
 	"fmt"
 	"google.golang.org/grpc"
@@ -64,12 +65,15 @@ func main() {
 	setRouteRuleEnpt := endpoint.MakeSetRouteRuleEndpoint(svc)
 	//voteResult = kitzipkin.TraceEndpoint(config.ZipkinTracer, "voteResult-endpoint")(voteResult)
 
+	syncRoutesEnpt := endpoint.MakeSyncRoutesEndpoint(svc)
+
 	endpoints := endpoint.DiscoverEndpoint{
 		DiscoverServiceWithName: discoverSvcWithNameEnpt,
 		DiscoverServiceWithID:   discoverSvcWithIDEnpt,
 		GetRouteInfoWithName:    getRouteInfoWithNameEnpt,
 		GetRouteInfoWithPrefix:  getRouteInfoWithPrefixEnpt,
 		SetRouteRule:            setRouteRuleEnpt,
+		SyncRoutesEndpoint:      syncRoutesEnpt,
 	}
 
 	// 定义transport层的trace
@@ -95,6 +99,8 @@ func main() {
 
 	}()
 
+	// 启动同步线程
+	tools.StartSyncFromMysql()
 	// TODO:pprof
 	// 启动 pprof 服务器
 	// http.ListenAndServe("0.0.0.0:6060", nil)

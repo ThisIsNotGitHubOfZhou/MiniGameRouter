@@ -4,6 +4,7 @@ import (
 	"discoversvr/config"
 	"discoversvr/database"
 	pb "discoversvr/proto"
+	"discoversvr/tools"
 	"fmt"
 	"strconv"
 )
@@ -23,6 +24,9 @@ type Service interface {
 
 	// 前缀路由(prefix)or定向路由(metadata)
 	SetRouteRule(*pb.RouteInfo) error
+
+	// 同步路由
+	SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error
 }
 
 // 定义中间键服务
@@ -98,4 +102,26 @@ func (s *DiscoverService) GetRouteInfoWithPrefix(name string, prefix string) ([]
 func (s *DiscoverService) SetRouteRule(info *pb.RouteInfo) error {
 	config.Logger.Println("[Info][discover] SetRouteRule begin")
 	return database.WriteToMysql(info)
+}
+
+func (s *DiscoverService) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
+	config.Logger.Println("[Info][discover] SyncRoutes begin")
+	if tools.SyncRouteUpdates == nil { // 确保通道已经初始化
+		return fmt.Errorf("SyncRouteUpdates channel is not initialized")
+	}
+
+	for {
+		select {
+		case route, ok := <-tools.SyncRouteUpdates:
+			if !ok {
+				return fmt.Errorf("SyncRouteUpdates channel closed")
+			}
+			if err := stream.Send(route); err != nil {
+				return err
+			}
+		case <-stream.Context().Done():
+			config.Logger.Println("[Info][discover] SyncRoutes end", req)
+			return stream.Context().Err()
+		}
+	}
 }

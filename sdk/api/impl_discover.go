@@ -5,6 +5,8 @@ import (
 	"fmt"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
+	"io"
+	"log"
 )
 
 // TODO：后面别使用轮询了，建议使用一致性哈希~
@@ -347,4 +349,54 @@ func encodeGRPCSetRouteRuleRequest(_ context.Context, request interface{}) (inte
 func decodeGRPCSetRouteRuleResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(*discoverpb.SetRouteRuleResponse)
 	return resp, nil
+}
+
+// cache同步线程
+func (c *MiniClient) SyncCache() error {
+	// TODO: 同步cache
+	// 利用stream流实现
+
+	fmt.Println("[Info][sdk] SyncCache，开始:")
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)    // 这里会不会有问题？如果并发起来的话
+	if err != nil {
+		return err
+	}
+
+	client := discoverpb.NewDiscoverServiceClient(conn)
+
+	req := &discoverpb.RouteSyncRequest{
+		// 填充请求数据
+	}
+	// 调用 SyncRoutes 方法
+	stream, err := client.SyncRoutes(context.Background(), req)
+	if err != nil {
+		log.Fatalf("could not call SyncRoutes: %v", err)
+	}
+
+	// 处理返回的流
+	for {
+		routeInfo, err := stream.Recv()
+		if err == io.EOF {
+			// 流结束
+			break
+		}
+		if err != nil {
+			log.Fatalf("error receiving stream: %v", err)
+		}
+
+		// 处理接收到的 RouteInfo
+		log.Printf("Received route: %v", routeInfo)
+	}
+	return nil
 }

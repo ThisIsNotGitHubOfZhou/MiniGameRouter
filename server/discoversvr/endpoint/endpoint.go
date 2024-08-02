@@ -4,6 +4,7 @@ import (
 	"context"
 	pb "discoversvr/proto"
 	"discoversvr/service"
+	"fmt"
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -14,6 +15,7 @@ type DiscoverEndpoint struct {
 	GetRouteInfoWithName    endpoint.Endpoint
 	GetRouteInfoWithPrefix  endpoint.Endpoint
 	SetRouteRule            endpoint.Endpoint
+	SyncRoutesEndpoint      endpoint.Endpoint
 }
 
 // 定义服务的请求和返回
@@ -140,5 +142,21 @@ func MakeSetRouteRuleEndpoint(svc service.Service) endpoint.Endpoint {
 		err := svc.SetRouteRule(req)
 
 		return SetRouteRuleResponse{Error: err}, nil
+	}
+}
+
+type SyncRoutesRequest struct {
+}
+type SyncRoutesResponse struct {
+}
+
+func MakeSyncRoutesEndpoint(svc service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*pb.RouteSyncRequest)
+		stream, ok := ctx.Value("stream").(pb.DiscoverService_SyncRoutesServer)
+		if !ok {
+			return nil, fmt.Errorf("stream not found in context")
+		}
+		return nil, svc.SyncRoutes(req, stream)
 	}
 }
