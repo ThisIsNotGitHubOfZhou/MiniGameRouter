@@ -368,7 +368,7 @@ func (c *MiniClient) SyncCache() error {
 		return fmt.Errorf("DiscoverGRPCPools empty")
 	}
 	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
-	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)    // 这里会不会有问题？如果并发起来的话
 	if err != nil {
 		return err
 	}

@@ -105,9 +105,8 @@ func (s *DiscoverService) SetRouteRule(info *pb.RouteInfo) error {
 }
 
 func (s *DiscoverService) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
-	// 确保通道已经初始化
 	config.Logger.Println("[Info][discover] SyncRoutes begin")
-	if tools.SyncRouteUpdates == nil {
+	if tools.SyncRouteUpdates == nil { // 确保通道已经初始化
 		return fmt.Errorf("SyncRouteUpdates channel is not initialized")
 	}
 

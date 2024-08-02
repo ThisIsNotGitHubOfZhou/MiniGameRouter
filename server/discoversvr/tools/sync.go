@@ -13,6 +13,7 @@ func init() {
 	SyncRouteUpdates = make(chan *pb.RouteInfo, 1000)
 }
 
+// TODO: 从MySQL同步数据
 func StartSyncFromMysql() {
 	SyncRouteUpdates = make(chan *pb.RouteInfo, 1000)
 	go syncRouteUpdatesFromMysql()
