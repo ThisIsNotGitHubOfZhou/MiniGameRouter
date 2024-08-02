@@ -7,7 +7,7 @@ import (
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 )
 
-// TODO：后面别使用轮询了
+// TODO：后面别使用轮询了，建议使用一致性哈希~
 // 根据服务名发现
 func (c *MiniClient) DiscoverServiceWithName(ctx context.Context, name string) ([]*discoverpb.ServiceInfo, error) {
 	fmt.Println("[Info][sdk] DiscoverServiceWithName，发现服务:", name)
@@ -122,8 +122,29 @@ func decodeGRPCDiscoverServiceWithIDResponse(_ context.Context, response interfa
 	return resp, nil
 }
 
+func (c *MiniClient) getRouteWithNameFromCache(name string) []*discoverpb.RouteInfo {
+	// TODO:先用cache~
+	c.routeCacheMu.RLock()
+	defer c.routeCacheMu.RUnlock()
+	if c.cache != nil {
+		routes, ok := c.cache[name]
+		if ok {
+			return routes
+		}
+	}
+	return nil
+}
+
 // 根据服务名返回路由
 func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*discoverpb.RouteInfo, error) {
+
+	// 先从缓存中获取
+	cacheRes := c.getRouteWithNameFromCache(name)
+	if cacheRes != nil {
+		fmt.Println("[Info][sdk] GetRouteInfoWithName，cache 命中获取路由:", name)
+		return cacheRes, nil
+	}
+
 	fmt.Println("[Info][sdk] GetRouteInfoWithName，获取路由:", name)
 	// 轮询服务
 	c.discoverLock.Lock()
@@ -181,8 +202,32 @@ func decodeGRPCGetRouteInfoWithNameResponse(_ context.Context, response interfac
 	return resp, nil
 }
 
+func (c *MiniClient) getRouteWithPrefixFromCache(name string, prefix string) []*discoverpb.RouteInfo {
+	c.routeCacheMu.RLock()
+	defer c.routeCacheMu.RUnlock()
+	if c.cache != nil && c.prefixToIndex != nil {
+		routesWithName, ok1 := c.cache[name]
+		index, ok2 := c.prefixToIndex[prefix]
+		if ok1 && ok2 {
+			var res []*discoverpb.RouteInfo
+			for _, i := range index {
+				res = append(res, routesWithName[i])
+			}
+			return res
+		}
+	}
+	return nil
+}
+
 // 根据服务名+前缀返回路由
 func (c *MiniClient) GetRouteInfoWithPrefix(ctx context.Context, name string, prefix string) ([]*discoverpb.RouteInfo, error) {
+	// 先从缓存中获取
+	cacheRes := c.getRouteWithPrefixFromCache(name, prefix)
+	if cacheRes != nil {
+		fmt.Println("[Info][sdk] GetRouteInfoWithPrefix，cache 命中获取路由:", name)
+		return cacheRes, nil
+	}
+
 	fmt.Println("[Info][sdk] GetRouteInfoWithPrefix，发现路由:", name)
 	// 轮询服务
 	c.discoverLock.Lock()
@@ -288,7 +333,6 @@ func (c *MiniClient) SetRouteRule(ctx context.Context, info *discoverpb.RouteInf
 	}
 	r := response.(*discoverpb.SetRouteRuleResponse)
 
-	fmt.Println("[Info][sdk]  SetRouteRule 结果", r)
 	if r.ErrorMes != "" {
 		fmt.Println("[Info][sdk]  SetRouteRule error", r.ErrorMes)
 		return fmt.Errorf(r.ErrorMes)

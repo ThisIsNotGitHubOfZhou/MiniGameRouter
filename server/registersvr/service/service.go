@@ -49,7 +49,7 @@ func (s *RegisterService) Register(name, host, port, protocol, metadata string, 
 	}()
 
 	// 原始同步版（有问题后启用）~~~~~~~~~~~~~~~~~~~~~~
-	// TODO:or设置一个开关？？
+	// TODO:异步or同步设置一个开关？？
 	//err := database.RegisterServiceInstance(config.RedisClient, instanceInfo["instance_id"].(string), instanceInfo, time.Duration(timeout)*time.Second*3+5*time.Second)
 	//if err != nil {
 	//	config.Logger.Println("[Error][register] database.RegisterServiceInstance 出错:", err)
