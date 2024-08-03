@@ -256,16 +256,16 @@ func encodeGRPCSetRouteRuleResponse(_ context.Context, grpcResp interface{}) (in
 }
 
 // 实现 gRPC 投票结果服务接口
-func (s *GrpcServer) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
+func (s *GrpcServer) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer) error {
 	ctx := context.WithValue(stream.Context(), "stream", stream)
-	_, _, err := s.syncRoutesEndpoint.ServeGRPC(ctx, req)
+	_, _, err := s.syncRoutesEndpoint.ServeGRPC(ctx, nil)
 	return err
 }
 
 // 请求解码器 rpc请求转换成endpoint层请求
 func decodeGRPCSyncRoutesRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*pb.RouteSyncRequest)
-	return req, nil
+	//req := grpcReq.(*pb.RouteSyncRequest)
+	return grpcReq, nil
 }
 
 // 响应编码器

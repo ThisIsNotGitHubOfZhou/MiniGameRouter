@@ -11,8 +11,8 @@ import (
 	"sync"
 )
 
-// 数据库连接池
-// var dbPools map[int]*sql.DB
+// TODO:读取写入mysql的时候把数据也要写到redis~写入是不是不用？
+
 var dbPoolsMutex sync.RWMutex
 
 // 初始化数据库连接池
@@ -49,7 +49,7 @@ func WriteToMysql(info *pb.RouteInfo) error {
 		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
-	// TODO：发布数据更新事件，然后每个server都去监听相关service的事件，有的话就更新本地的redis，缓存~
+	// TODO：写入redis带上时间戳~
 	return nil
 }
 
@@ -75,8 +75,6 @@ func writeToDB(dbID int, info *pb.RouteInfo) error {
 	return nil
 }
 
-// TODO:delete
-
 // hashStringToRange hashes a string using SHA-256 and maps it to a specified range [0, maxRange-1]
 func hashStringToRange(s string, max int) int {
 
@@ -89,14 +87,6 @@ func hashStringToRange(s string, max int) int {
 	// 将无符号整数映射到指定的区间
 
 	return int(hashInt % uint64(max))
-}
-
-func asciiSum(s string) int {
-	sum := 0
-	for _, char := range s {
-		sum += int(char)
-	}
-	return sum
 }
 
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
@@ -119,7 +109,7 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 		res = append(res, tempRes...)
 	}
 
-	// TODO:后续改造~直接从mysql里面读
+	// TODO:写一份到redis
 	return res, nil
 
 }
@@ -166,7 +156,6 @@ func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
 	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
 		name, prefix, strconv.FormatInt(int64(dbID), 2))
 
-	// TODO:后续改造~直接从mysql里面读
 	return readFromDBWithPrefix(dbID, name, prefix)
 
 }
@@ -202,6 +191,6 @@ func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error
 		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-
+	// TODO:写到redis作为热点数据
 	return routeInfos, nil
 }

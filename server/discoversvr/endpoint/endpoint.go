@@ -152,11 +152,10 @@ type SyncRoutesResponse struct {
 
 func MakeSyncRoutesEndpoint(svc service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(*pb.RouteSyncRequest)
 		stream, ok := ctx.Value("stream").(pb.DiscoverService_SyncRoutesServer)
 		if !ok {
 			return nil, fmt.Errorf("stream not found in context")
 		}
-		return nil, svc.SyncRoutes(req, stream)
+		return nil, svc.SyncRoutes(stream)
 	}
 }

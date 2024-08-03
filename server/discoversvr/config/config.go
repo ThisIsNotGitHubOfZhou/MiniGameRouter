@@ -18,6 +18,7 @@ var KitLogger kitlog.Logger
 
 var (
 	RedisClient      *redis.Client
+	SyncRedisClient  *redis.Client
 	MysqlClient      *sql.DB
 	DiscoverGrpcHost string
 	DiscoverGrpcPort string
@@ -53,6 +54,14 @@ func init() {
 		Addr:        "21.6.163.18:6380", // Redis 地址
 		Password:    "664597599Zcf!",    // Redis 密码，没有则留空
 		DB:          0,                  // 使用的数据库，默认为0
+		PoolSize:    3000,               // 连接池大小
+		PoolTimeout: 20 * time.Second,   //连接池等待时间
+	})
+
+	SyncRedisClient = redis.NewClient(&redis.Options{
+		Addr:        "21.6.163.18:6380", // Redis 地址
+		Password:    "664597599Zcf!",    // Redis 密码，没有则留空
+		DB:          1,                  // 使用的数据库，同步数据库
 		PoolSize:    3000,               // 连接池大小
 		PoolTimeout: 20 * time.Second,   //连接池等待时间
 	})
