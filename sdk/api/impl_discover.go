@@ -486,8 +486,10 @@ func (c *MiniClient) SyncCache() error {
 		}
 
 		// 处理接收到的 RouteInfo
+		c.syncRoute(routeInfo)
+
 		// TODO:记录同步时间
-		log.Printf("~~~~~~~~~~~~~~~TODO~~~~~~~~~~~~~Received route: %v", routeInfo.NewVersion)
+		log.Printf("~~~~~~~~~~~~~~~TODO~~~~~~~~~~~~~Received route: %v", len(routeInfo.Routes))
 	}
 	return nil
 }

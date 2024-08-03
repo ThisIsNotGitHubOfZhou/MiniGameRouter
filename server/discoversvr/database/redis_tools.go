@@ -34,7 +34,7 @@ func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string
 func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncRequest) []*pb.RouteInfo {
 	// TODO:同步的信息就放在1号redis数据库吧
 
-	config.Logger.Println("[Info][discover]   ~~~~~~SyncRoutesWithRouteSyncRequest", req.LastSyncVersion)
+	config.Logger.Println("[Info][discover]   SyncRoutesWithRouteSyncRequest时间戳：", req.LastSyncVersion)
 	res := make([]*pb.RouteInfo, 0)
 	// name、namePrefix需要比reqTime晚~
 	for _, key := range req.Name {

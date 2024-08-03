@@ -117,6 +117,7 @@ func (s *DiscoverService) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer)
 	go func() {
 		for {
 			req, err := stream.Recv()
+			config.Logger.Printf("[Info][discover] 收到来自客户端的同步需求：Name长度:%v namePrefix长度：%v\n", len(req.Name), len(req.NamePrefix))
 			if err != nil {
 				if err == io.EOF {
 					close(clientRequests)
