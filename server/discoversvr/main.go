@@ -111,7 +111,7 @@ func main() {
 	//mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	//mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	//mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	//go func() { log.Fatal(http.ListenAndServe(config.PprofPort, mux)) }() // TODO:修改端口信息
+	//go func() { log.Fatal(http.ListenAndServe(config.PprofPort, mux)) }()
 
 	go func() {
 		c := make(chan os.Signal, 1)

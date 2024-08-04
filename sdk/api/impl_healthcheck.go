@@ -23,7 +23,7 @@ func (c *MiniClient) HealthCheckS(ctx context.Context, port string) error {
 
 	}()
 
-	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure()) // TODO:需要从连接池里面哪吗？
+	conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure()) // NOTE:应该不需要从连接池里面拿，因为只发送一次
 	if err != nil {
 		return err
 	}

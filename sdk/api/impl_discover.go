@@ -128,7 +128,6 @@ func decodeGRPCDiscoverServiceWithIDResponse(_ context.Context, response interfa
 
 // 从cache里面读取数据
 func (c *MiniClient) getRouteWithNameFromCache(name string) []*discoverpb.RouteInfo {
-	// TODO:先用cache~
 	c.routeCacheMu.RLock()
 	defer c.routeCacheMu.RUnlock()
 	if c.cache != nil {
@@ -269,7 +268,7 @@ func (c *MiniClient) putRouteWithPrefixToCache(name string, prefix string, route
 	if c.prefixToIndex == nil {
 		c.prefixToIndex = make(map[string][]int)
 	}
-	c.cache[name] = append(c.cache[name], routes...) // 会不会有冗余数据：TODO,去冗余
+	c.cache[name] = append(c.cache[name], routes...)
 	c.cacheTime[name] = time.Now()
 	for i, route := range routes {
 		if route.Prefix != "" {
@@ -494,23 +493,23 @@ func (c *MiniClient) deduplicate() {
 	fmt.Println("[Info][sdk] 本地路由总数", totalSize)
 }
 
-// TODO:是否会让时间太长？
+// TODO:是否太消耗性能？
 func (c *MiniClient) syncRoute(resp *discoverpb.RouteSyncResponse) {
 	c.routeCacheMu.Lock()
 	defer c.routeCacheMu.Unlock()
 	c.lastUpdateTime = resp.NewVersion // 只有这里会更新时间戳，putRouteWithPrefixToCache、putRouteWithNameToCache不会更新~
-	// TODO:resp.Routes去重,同步cache
 
 	for _, route := range resp.Routes {
 		c.cache[route.Name] = append(c.cache[route.Name], route)
 	}
+
+	// 去重
 	c.deduplicate()
 }
 
 // cache同步线程
 func (c *MiniClient) SyncCache() error {
 	// 利用stream流实现
-	// TODO:服务如果有新的要访问的路由数据如何只增量读？如何设计？
 
 	fmt.Println("[Info][sdk] SyncCache，开始:")
 	// 轮询服务
@@ -542,7 +541,7 @@ func (c *MiniClient) SyncCache() error {
 	go func() {
 		for {
 			req := c.getRouteSyncRequest()
-			//fmt.Printf("~~~~~~~~~~~~~~~TODO~~~~~~~~~~~~~同步请求:\n name :  %v %v \n nameprfix : %v %v\n", req.Name, len(req.Name), req.NamePrefix, len(req.NamePrefix))
+			//fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~同步请求:\n name :  %v %v \n nameprfix : %v %v\n", req.Name, len(req.Name), req.NamePrefix, len(req.NamePrefix))
 			if err := stream.Send(req); err != nil {
 				if err == io.EOF {
 					return

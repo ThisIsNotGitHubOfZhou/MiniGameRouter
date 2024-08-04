@@ -22,29 +22,29 @@ type MiniClient struct {
 	timeout    int
 	healthport string
 
-	// TODO:后续整理:配置化、私有化
+	// TODO:三个服务后续整理:配置化、私有化
 	// 下面是服务注册相关的
 	registerFlag       int64
-	RegisterServerInfo []string // register服务器IP:PORT集合,TODO:后续私有化
+	RegisterServerInfo []string // register服务器IP:PORT集合
 	RegisterGRPCPools  []*tools.GRPCPool
 	registerLock       sync.Mutex
 	registerPoolSize   int
 
 	// 下面是健康检测
 	healthCheckFlag       int64
-	HealthCheckServerInfo []string // 服务器IP:PORT集合,TODO:后续私有化
+	HealthCheckServerInfo []string // 服务器IP:PORT集合
 	HealthCheckGRPCPools  []*tools.GRPCPool
 	healthCheckLock       sync.Mutex
 	healthCheckPoolSize   int
 
 	// 下面是服务发现
 	discoverFlag       int64
-	DiscoverServerInfo []string // 服务器IP:PORT集合,TODO:后续私有化
+	DiscoverServerInfo []string // 服务器IP:PORT集合
 	DiscoverGRPCPools  []*tools.GRPCPool
 	discoverLock       sync.Mutex
 	discoverPoolSize   int
 
-	// TODO:缓存
+	// 缓存
 	routeCacheMu   sync.RWMutex
 	lastUpdateTime string
 	cache          map[string][]*discoverpb.RouteInfo // service到路由信息组的map,TODO:去重和效率之间的取舍（存路由信息）
@@ -81,7 +81,7 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 
 func (c *MiniClient) InitConfig() error { // 初始化配置
 	// 初始化Register连接池
-	// TODO:注意RegisterServerInfo要被初始化！
+	// NOTE:注意RegisterServerInfo要被初始化！
 	if c.RegisterServerInfo == nil {
 		fmt.Println("[Error][sdk] RegisterServerInfo没有初始化~")
 		//return fmt.Errorf("RegisterServerInfo not init")
@@ -96,7 +96,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	}
 
 	// 初始化HealthCheck连接池
-	// TODO:注意HealthCheckServerInfo要被初始化！
+	// NOTE:注意HealthCheckServerInfo要被初始化！
 	if c.HealthCheckServerInfo == nil {
 		fmt.Println("[Error][sdk] HealthCheckServerInfo没有初始化~")
 		//return fmt.Errorf("HealthCheckServerInfo not init")
@@ -111,7 +111,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	}
 
 	// 初始化discover连接池
-	// TODO:注意DiscoverServerInfo要被初始化！
+	// NOTE:注意DiscoverServerInfo要被初始化！
 	if c.DiscoverServerInfo == nil {
 		fmt.Println("[Error][sdk] DiscoverServerInfo没有初始化~")
 		//return fmt.Errorf("DiscoverServerInfo not init")
