@@ -11,8 +11,6 @@ import (
 	"sync"
 )
 
-// TODO:读取写入mysql的时候把数据也要写到redis~写入是不是不用？
-
 var dbPoolsMutex sync.RWMutex
 
 // 初始化数据库连接池
@@ -186,6 +184,6 @@ func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error
 		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-	// TODO:写到redis作为热点数据
+
 	return routeInfos, nil
 }
