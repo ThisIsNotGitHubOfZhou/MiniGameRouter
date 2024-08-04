@@ -110,24 +110,26 @@ func (s *DiscoverService) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer)
 
 	// 创建一个通道，用于接收客户端发送的请求
 	clientRequests := make(chan *pb.RouteSyncRequest)
-	// TODO:监听所有mysql中更新或插入name = req.Name的路由.直接去redis里面读就行了把？
-	// TODO:设计dirty位，
 
 	// 启动一个 goroutine 来处理客户端发送的请求
 	go func() {
 		for {
 			req, err := stream.Recv()
-			config.Logger.Printf("[Info][discover] 收到来自客户端的同步需求：Name长度:%v namePrefix长度：%v\n", len(req.Name), len(req.NamePrefix))
+
 			if err != nil {
 				if err == io.EOF {
 					close(clientRequests)
+					config.Logger.Println("[Info][discover] 断开连接~ end")
 					return
 				}
 				config.Logger.Println("[Error][discover] Failed to receive client request:", err)
 				return
 			}
+			//config.Logger.Printf("[Info][discover] ~~~~~~~~~~~~~~~~~~~~收到来自客户端的同步需求：Name长度:%v namePrefix长度：%v,时间戳：%v, NameNew长度：%v,namePrefixNew长度：%v\n",
+			//	len(req.Name), len(req.NamePrefix), req.LastSyncVersion, len(req.NameNew), len(req.NamePrefixNew))
 			clientRequests <- req
 		}
+
 	}()
 
 	for {
@@ -137,13 +139,12 @@ func (s *DiscoverService) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer)
 				config.Logger.Println("[Info][discover] Client closed the connection")
 				return nil
 			}
-			config.Logger.Println("[Info][discover] Received client request with last_sync_version:", req.LastSyncVersion)
 			// 处理客户端请求，例如更新客户端的版本号等
 			routes := database.SyncRoutesWithRouteSyncRequest(config.SyncRedisClient, req)
 			// 发送增量更新的路由信息给客户端
 			response := &pb.RouteSyncResponse{
-				Routes:     routes,              // 假设 route 是 *pb.RouteInfo 类型
-				NewVersion: time.Now().String(), // 这里需要替换为实际的新版本号
+				Routes:     routes,                          // 假设 route 是 *pb.RouteInfo 类型
+				NewVersion: time.Now().Format(time.RFC3339), // 这里需要替换为实际的新版本号
 			}
 			if err := stream.Send(response); err != nil {
 				return err

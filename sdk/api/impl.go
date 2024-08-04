@@ -7,6 +7,7 @@ import (
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/tools"
 	"sync"
+	"time"
 )
 
 type MiniClient struct {
@@ -46,8 +47,9 @@ type MiniClient struct {
 	// TODO:缓存
 	routeCacheMu   sync.RWMutex
 	lastUpdateTime string
-	cache          map[string][]*discoverpb.RouteInfo // service到路由信息组的map,TODO:去重和效率之间的取舍
-	prefixToIndex  map[string][]int                   // servicename+":"+前缀  ->下标的映射(下标指在同名的service中，路由信息组的下标)
+	cache          map[string][]*discoverpb.RouteInfo // service到路由信息组的map,TODO:去重和效率之间的取舍（存路由信息）
+	cacheTime      map[string]time.Time               // service到最后更新时间的map,只有使用的时候才更新
+	prefixToIndex  map[string][]int                   // servicename+":"+前缀  ->下标的映射(下标指在同名的service中，路由信息组的下标,不存路由信息)
 }
 
 var _ service.RegisterService = (*MiniClient)(nil)

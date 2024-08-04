@@ -18,7 +18,7 @@ var KitLogger kitlog.Logger
 
 var (
 	RedisClient      *redis.Client
-	SyncRedisClient  *redis.Client
+	SyncRedisClient  *redis.Client // 用Host-Port:Name:prefix的格式作为Key
 	MysqlClient      *sql.DB
 	DiscoverGrpcHost string
 	DiscoverGrpcPort string

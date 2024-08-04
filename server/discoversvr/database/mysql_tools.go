@@ -49,7 +49,6 @@ func WriteToMysql(info *pb.RouteInfo) error {
 		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
-	// TODO：写入redis带上时间戳~
 	return nil
 }
 
@@ -99,8 +98,8 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	// TODO:这里耗时较大重点优化~
 	// 只提供name的话，需要遍历部分db
 	for i := dbID; i < endDBID; i++ {
-		config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
-			name, strconv.FormatInt(int64(i), 2))
+		//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
+		//	name, strconv.FormatInt(int64(i), 2))
 		tempRes, err := readFromDBWithName(i, name)
 		if err != nil {
 			config.Logger.Println("[Error][discover][mysql] readFromDBWithName Error: ", err)
@@ -109,26 +108,22 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 		res = append(res, tempRes...)
 	}
 
-	// TODO:写一份到redis
+	// 同步到内存
+	WriteSyncRoutes(config.SyncRedisClient, res)
 	return res, nil
 
 }
 
 func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
-	//db, ok := dbPools[dbID]
-	//if !ok {
-	//	return fmt.Errorf("no database found for dbID %d", dbID)
-	//}
 
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ?", tableName)
-	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
 	rows, err := config.MysqlClient.Query(query, name)
+	defer rows.Close()
 	if err != nil {
 		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
-	defer rows.Close()
 
 	var routeInfos []*pb.RouteInfo
 	for rows.Next() {
@@ -153,29 +148,29 @@ func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange(prefix, 8)
 
-	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
-		name, prefix, strconv.FormatInt(int64(dbID), 2))
+	//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
+	//	name, prefix, strconv.FormatInt(int64(dbID), 2))
 
-	return readFromDBWithPrefix(dbID, name, prefix)
+	res, err := readFromDBWithPrefix(dbID, name, prefix)
+
+	// 同步到内存
+	WriteSyncRoutes(config.SyncRedisClient, res)
+	return res, err
 
 }
 
 func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error) {
-	//db, ok := dbPools[dbID]
-	//if !ok {
-	//	return fmt.Errorf("no database found for dbID %d", dbID)
-	//}
+
 	db := config.MysqlClient
 
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ? AND prefix = ?", tableName)
-	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
 	rows, err := db.Query(query, name, prefix)
+	defer rows.Close()
 	if err != nil {
 		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
-	defer rows.Close()
 
 	var routeInfos []*pb.RouteInfo
 	for rows.Next() {

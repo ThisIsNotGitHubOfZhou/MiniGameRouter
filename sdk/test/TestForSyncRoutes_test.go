@@ -9,7 +9,9 @@ import (
 )
 
 func TestSyncRoutesFunction(t *testing.T) {
+
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)
+	defer client.Close()
 	ctx := context.Background()
 	// 服务注册~~~~~~~~~~~~~~
 	//client.RegisterServerInfo = []string{"localhost:20001", "localhost:20002", "localhost:20003", "localhost:20004", "localhost:20005"}
@@ -19,26 +21,50 @@ func TestSyncRoutesFunction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Log("开始同步 ")
+	go client.SyncCache() // 开始同步
+
+	t.Log("设置了一条路由 ")
+	time.Sleep(10 * time.Second)
+	// 设置一条路由，这时候缓存里应该啥也没有
 	err = client.SetRouteRule(ctx, &discoverpb.RouteInfo{
 		Name:     "test",
 		Host:     "localhost",
-		Port:     "20001",
+		Port:     "2222",
 		Prefix:   "/test",
-		Metadata: "{'flag':true}",
+		Metadata: `{"flag": true}`, // 确保这是一个有效的 JSON 字符串
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	routes, err := client.DiscoverServiceWithName(ctx, "test")
+	t.Log("读取路由信息")
+	time.Sleep(5 * time.Second)
+	// 这时候应该会存到缓存
+	//client.DiscoverServiceWithName(ctx, "test")
+	routes, err := client.GetRouteInfoWithName(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("[Info][sdk][test] 路由长度:", len(routes))
-	client.SyncCache()
+
+	t.Log("[Info][sdk][test] 路由信息:", routes)
+
+	t.Log("应该存到缓存了现在 ")
+	time.Sleep(5 * time.Second)
+
+	err = client.SetRouteRule(ctx, &discoverpb.RouteInfo{
+		Name:     "test",
+		Host:     "localhost",
+		Port:     "3333",
+		Prefix:   "/test",
+		Metadata: `{"flag": true}`, // 确保这是一个有效的 JSON 字符串
+	})
+
+	t.Log("缓存过一会就会更新应该 ")
+	time.Sleep(5 * time.Second)
 
 	time.Sleep(time.Second * 500)
-	client.Close()
 
 	//client.DeRegister(ctx, client.ID(), client.Name(), client.Host(), client.Port())
 
