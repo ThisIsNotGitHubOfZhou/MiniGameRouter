@@ -11,8 +11,8 @@ import (
 	"sync"
 )
 
-// 数据库连接池
-// var dbPools map[int]*sql.DB
+// TODO:读取写入mysql的时候把数据也要写到redis~写入是不是不用？
+
 var dbPoolsMutex sync.RWMutex
 
 // 初始化数据库连接池
@@ -49,7 +49,6 @@ func WriteToMysql(info *pb.RouteInfo) error {
 		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
-	// TODO：发布数据更新事件，然后每个server都去监听相关service的事件，有的话就更新本地的redis，缓存~
 	return nil
 }
 
@@ -75,8 +74,6 @@ func writeToDB(dbID int, info *pb.RouteInfo) error {
 	return nil
 }
 
-// TODO:delete
-
 // hashStringToRange hashes a string using SHA-256 and maps it to a specified range [0, maxRange-1]
 func hashStringToRange(s string, max int) int {
 
@@ -91,14 +88,6 @@ func hashStringToRange(s string, max int) int {
 	return int(hashInt % uint64(max))
 }
 
-func asciiSum(s string) int {
-	sum := 0
-	for _, char := range s {
-		sum += int(char)
-	}
-	return sum
-}
-
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 
 	// 根据shardingkey选择分片
@@ -109,8 +98,8 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	// TODO:这里耗时较大重点优化~
 	// 只提供name的话，需要遍历部分db
 	for i := dbID; i < endDBID; i++ {
-		config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
-			name, strconv.FormatInt(int64(i), 2))
+		//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
+		//	name, strconv.FormatInt(int64(i), 2))
 		tempRes, err := readFromDBWithName(i, name)
 		if err != nil {
 			config.Logger.Println("[Error][discover][mysql] readFromDBWithName Error: ", err)
@@ -119,26 +108,22 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 		res = append(res, tempRes...)
 	}
 
-	// TODO:后续改造~直接从mysql里面读
+	// 同步到内存
+	WriteSyncRoutes(config.SyncRedisClient, res)
 	return res, nil
 
 }
 
 func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
-	//db, ok := dbPools[dbID]
-	//if !ok {
-	//	return fmt.Errorf("no database found for dbID %d", dbID)
-	//}
 
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ?", tableName)
-	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
 	rows, err := config.MysqlClient.Query(query, name)
+	defer rows.Close()
 	if err != nil {
 		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
-	defer rows.Close()
 
 	var routeInfos []*pb.RouteInfo
 	for rows.Next() {
@@ -163,30 +148,29 @@ func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange(prefix, 8)
 
-	config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
-		name, prefix, strconv.FormatInt(int64(dbID), 2))
+	//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
+	//	name, prefix, strconv.FormatInt(int64(dbID), 2))
 
-	// TODO:后续改造~直接从mysql里面读
-	return readFromDBWithPrefix(dbID, name, prefix)
+	res, err := readFromDBWithPrefix(dbID, name, prefix)
+
+	// 同步到内存
+	WriteSyncRoutes(config.SyncRedisClient, res)
+	return res, err
 
 }
 
 func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error) {
-	//db, ok := dbPools[dbID]
-	//if !ok {
-	//	return fmt.Errorf("no database found for dbID %d", dbID)
-	//}
+
 	db := config.MysqlClient
 
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ? AND prefix = ?", tableName)
-	config.Logger.Printf("[Info][discover][mysql] 执行查询命令：%v\n", query)
 	rows, err := db.Query(query, name, prefix)
+	defer rows.Close()
 	if err != nil {
 		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
-	defer rows.Close()
 
 	var routeInfos []*pb.RouteInfo
 	for rows.Next() {
@@ -202,6 +186,6 @@ func readFromDBWithPrefix(dbID int, name, prefix string) ([]*pb.RouteInfo, error
 		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
 		return nil, fmt.Errorf("rows error: %v", err)
 	}
-
+	// TODO:写到redis作为热点数据
 	return routeInfos, nil
 }

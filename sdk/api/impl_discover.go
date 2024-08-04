@@ -5,8 +5,10 @@ import (
 	"fmt"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
+	"hash/fnv"
 	"io"
 	"log"
+	"time"
 )
 
 // TODO：后面别使用轮询了，建议使用一致性哈希~
@@ -37,7 +39,7 @@ func (c *MiniClient) DiscoverServiceWithName(ctx context.Context, name string) (
 		"DiscoverServiceWithName",  // 方法名称
 		encodeGRPCDiscoverServiceWithNameRequest,
 		decodeGRPCDiscoverServiceWithNameResponse,
-		discoverpb.DiscoverServiceWithNameRequest{},
+		discoverpb.DiscoverServiceResponse{},
 		//clientTracer,
 	).Endpoint()
 
@@ -124,12 +126,14 @@ func decodeGRPCDiscoverServiceWithIDResponse(_ context.Context, response interfa
 	return resp, nil
 }
 
+// 从cache里面读取数据
 func (c *MiniClient) getRouteWithNameFromCache(name string) []*discoverpb.RouteInfo {
 	// TODO:先用cache~
 	c.routeCacheMu.RLock()
 	defer c.routeCacheMu.RUnlock()
 	if c.cache != nil {
 		routes, ok := c.cache[name]
+		c.cacheTime[name] = time.Now()
 		if ok {
 			return routes
 		}
@@ -137,9 +141,35 @@ func (c *MiniClient) getRouteWithNameFromCache(name string) []*discoverpb.RouteI
 	return nil
 }
 
+// 从grpc请求后更新cache
+func (c *MiniClient) putRouteWithNameToCache(name string, routes []*discoverpb.RouteInfo) {
+	c.routeCacheMu.Lock()
+	defer c.routeCacheMu.Unlock()
+	if c.cache == nil {
+		c.cache = make(map[string][]*discoverpb.RouteInfo)
+	}
+	if c.cacheTime == nil {
+		c.cacheTime = make(map[string]time.Time)
+	}
+	if c.prefixToIndex == nil {
+		c.prefixToIndex = make(map[string][]int)
+	}
+	c.cache[name] = append(c.cache[name], routes...)
+	c.cacheTime[name] = time.Now()
+	for i, route := range routes {
+		if name != route.Name {
+			fmt.Println("[Error][sdk] 服务名、前缀不一致~")
+			continue
+		}
+		if route.Prefix != "" {
+			c.prefixToIndex[route.Name+":"+route.Prefix] = append(c.prefixToIndex[route.Name], i) // 可能有前缀相同的多个服务
+		}
+	}
+
+}
+
 // 根据服务名返回路由
 func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*discoverpb.RouteInfo, error) {
-
 	// 先从缓存中获取
 	cacheRes := c.getRouteWithNameFromCache(name)
 	if cacheRes != nil {
@@ -192,6 +222,9 @@ func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*
 	if r.ErrorMes != "" {
 		fmt.Println("[Info][sdk]  GetRouteInfoWithName error", r.ErrorMes)
 	}
+
+	// 存入cache
+	c.putRouteWithNameToCache(name, r.Routes)
 	return r.Routes, nil
 }
 
@@ -204,21 +237,49 @@ func decodeGRPCGetRouteInfoWithNameResponse(_ context.Context, response interfac
 	return resp, nil
 }
 
+// 从cache里面读取数据
 func (c *MiniClient) getRouteWithPrefixFromCache(name string, prefix string) []*discoverpb.RouteInfo {
 	c.routeCacheMu.RLock()
 	defer c.routeCacheMu.RUnlock()
 	if c.cache != nil && c.prefixToIndex != nil {
 		routesWithName, ok1 := c.cache[name]
-		index, ok2 := c.prefixToIndex[prefix]
+		indexs, ok2 := c.prefixToIndex[name+":"+prefix]
 		if ok1 && ok2 {
+			c.cacheTime[name] = time.Now()
 			var res []*discoverpb.RouteInfo
-			for _, i := range index {
+			for _, i := range indexs {
 				res = append(res, routesWithName[i])
 			}
 			return res
 		}
 	}
 	return nil
+}
+
+// 从grpc请求后更新cache
+func (c *MiniClient) putRouteWithPrefixToCache(name string, prefix string, routes []*discoverpb.RouteInfo) {
+	c.routeCacheMu.Lock()
+	defer c.routeCacheMu.Unlock()
+	if c.cache == nil {
+		c.cache = make(map[string][]*discoverpb.RouteInfo)
+	}
+	if c.cacheTime == nil {
+		c.cacheTime = make(map[string]time.Time)
+	}
+	if c.prefixToIndex == nil {
+		c.prefixToIndex = make(map[string][]int)
+	}
+	c.cache[name] = append(c.cache[name], routes...) // 会不会有冗余数据：TODO,去冗余
+	c.cacheTime[name] = time.Now()
+	for i, route := range routes {
+		if route.Prefix != "" {
+			if route.Prefix != prefix || name != route.Name {
+				fmt.Println("[Error][sdk] 服务名、前缀不一致~")
+				continue
+			}
+			c.prefixToIndex[route.Name+":"+route.Prefix] = append(c.prefixToIndex[route.Name+":"+route.Prefix], i) // 可能有前缀相同的多个服务
+		}
+	}
 }
 
 // 根据服务名+前缀返回路由
@@ -276,6 +337,7 @@ func (c *MiniClient) GetRouteInfoWithPrefix(ctx context.Context, name string, pr
 	if r.ErrorMes != "" {
 		fmt.Println("[Info][sdk]  GetRouteInfoWithPrefix error", r.ErrorMes)
 	}
+	c.putRouteWithPrefixToCache(name, prefix, r.Routes) // 将prefix路由写入缓存
 	return r.Routes, nil
 }
 
@@ -351,10 +413,104 @@ func decodeGRPCSetRouteRuleResponse(_ context.Context, response interface{}) (in
 	return resp, nil
 }
 
+func (c *MiniClient) getRouteSyncRequest() *discoverpb.RouteSyncRequest {
+	c.routeCacheMu.RLock()
+	defer c.routeCacheMu.RUnlock()
+	return &discoverpb.RouteSyncRequest{
+		Name:            getCacheStringKeys(c.cache),
+		NamePrefix:      getPrefixToIndexKeys(c.prefixToIndex),
+		LastSyncVersion: c.lastUpdateTime,
+
+		// TODO: NameNew、NamePrefixNew
+
+	}
+}
+
+func getCacheStringKeys(m map[string][]*discoverpb.RouteInfo) []string {
+	result := make([]string, 0)
+	for k, _ := range m {
+		result = append(result, k)
+	}
+	return result
+}
+func getPrefixToIndexKeys(m map[string][]int) []string {
+	result := make([]string, 0)
+	for k, _ := range m {
+		result = append(result, k)
+	}
+	return result
+}
+
+// 用于去重
+func hashRouteInfo(route *discoverpb.RouteInfo) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(route.Name))
+	h.Write([]byte(route.Host))
+	h.Write([]byte(route.Port))
+	h.Write([]byte(route.Prefix))
+	h.Write([]byte(route.Metadata))
+	return h.Sum64()
+}
+
+// 去重本地缓存，注意不能加锁！！！！每次同步后都会调用
+func (c *MiniClient) deduplicate() {
+	// 对c.cache进行去重,并清理过期键
+
+	// 对 c.cache 进行去重
+	deleteKey := []string{}
+	// 更新c.prefixToIndex
+	totalSize := 0
+	c.prefixToIndex = map[string][]int{}
+	for key, routes := range c.cache {
+		if c.cacheTime[key].Before(time.Now().Add(-10 * time.Minute)) { // 删除十分钟前的key
+			deleteKey = append(deleteKey, key)
+			continue
+		}
+		seen := make(map[uint64]bool)
+		uniqueRoutes := []*discoverpb.RouteInfo{}
+
+		for _, route := range routes {
+			if route.Name != key {
+				fmt.Println("[Error][sdk][cache] 存在cache中的路由名不一致")
+				continue // 处理错误，跳过不一致的路由
+			}
+			hash := hashRouteInfo(route)
+			if !seen[hash] {
+				seen[hash] = true
+				uniqueRoutes = append(uniqueRoutes, route)
+				totalSize++
+				if route.Prefix != "" {
+					c.prefixToIndex[route.Name+":"+route.Prefix] = append(c.prefixToIndex[key], len(uniqueRoutes)-1)
+				}
+			}
+		}
+		c.cache[key] = uniqueRoutes
+	}
+	for _, val := range deleteKey {
+		delete(c.cache, val)
+		delete(c.cacheTime, val)
+	}
+
+	fmt.Println("[Info][sdk] 本地路由总数", totalSize)
+}
+
+// TODO:是否会让时间太长？
+func (c *MiniClient) syncRoute(resp *discoverpb.RouteSyncResponse) {
+	c.routeCacheMu.Lock()
+	defer c.routeCacheMu.Unlock()
+	c.lastUpdateTime = resp.NewVersion // 只有这里会更新时间戳，putRouteWithPrefixToCache、putRouteWithNameToCache不会更新~
+	// TODO:resp.Routes去重,同步cache
+
+	for _, route := range resp.Routes {
+		c.cache[route.Name] = append(c.cache[route.Name], route)
+	}
+	c.deduplicate()
+}
+
 // cache同步线程
 func (c *MiniClient) SyncCache() error {
-	// TODO: 同步cache
 	// 利用stream流实现
+	// TODO:服务如果有新的要访问的路由数据如何只增量读？如何设计？
 
 	fmt.Println("[Info][sdk] SyncCache，开始:")
 	// 轮询服务
@@ -367,22 +523,35 @@ func (c *MiniClient) SyncCache() error {
 		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
 		return fmt.Errorf("DiscoverGRPCPools empty")
 	}
-	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
-	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)    // 这里会不会有问题？如果并发起来的话
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get()
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
 	if err != nil {
 		return err
 	}
 
 	client := discoverpb.NewDiscoverServiceClient(conn)
+	// ~~~~~~~~~~~~~~~~~上面是固定操作，下面才是真正同步逻辑~~~~~~~~~~~~~~~~~~
 
-	req := &discoverpb.RouteSyncRequest{
-		// 填充请求数据
-	}
-	// 调用 SyncRoutes 方法
-	stream, err := client.SyncRoutes(context.Background(), req)
+	// 创建双向流
+	stream, err := client.SyncRoutes(context.Background())
 	if err != nil {
-		log.Fatalf("could not call SyncRoutes: %v", err)
+		log.Fatalf("SyncRoutes could not create stream: %v", err)
 	}
+
+	// 启动一个 goroutine 来发送请求
+	go func() {
+		for {
+			req := c.getRouteSyncRequest()
+			//fmt.Printf("~~~~~~~~~~~~~~~TODO~~~~~~~~~~~~~同步请求:\n name :  %v %v \n nameprfix : %v %v\n", req.Name, len(req.Name), req.NamePrefix, len(req.NamePrefix))
+			if err := stream.Send(req); err != nil {
+				if err == io.EOF {
+					return
+				}
+				log.Fatalf("failed to send request: %v", err)
+			}
+			time.Sleep(5 * time.Second) // 模拟定期发送请求,配置化
+		}
+	}()
 
 	// 处理返回的流
 	for {
@@ -396,7 +565,8 @@ func (c *MiniClient) SyncCache() error {
 		}
 
 		// 处理接收到的 RouteInfo
-		log.Printf("Received route: %v", routeInfo)
+		c.syncRoute(routeInfo)
+
 	}
 	return nil
 }

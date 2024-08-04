@@ -2,11 +2,11 @@ package main
 
 import (
 	"discoversvr/config"
+	"discoversvr/database"
 	"discoversvr/endpoint"
 	"discoversvr/plugins"
 	pb "discoversvr/proto"
 	"discoversvr/service"
-	"discoversvr/tools"
 	"discoversvr/transport"
 	"fmt"
 	"google.golang.org/grpc"
@@ -99,8 +99,9 @@ func main() {
 
 	}()
 
-	// 启动同步线程
-	tools.StartSyncFromMysql()
+	// 启动同步线程：定时从mysql里面读取最新信息（从消息队列里读取）
+	go database.LoopRefreshSvrCache(config.SyncRedisClient)
+
 	// TODO:pprof
 	// 启动 pprof 服务器
 	// http.ListenAndServe("0.0.0.0:6060", nil)

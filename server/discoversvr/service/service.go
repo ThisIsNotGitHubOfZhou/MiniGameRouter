@@ -4,9 +4,10 @@ import (
 	"discoversvr/config"
 	"discoversvr/database"
 	pb "discoversvr/proto"
-	"discoversvr/tools"
 	"fmt"
+	"io"
 	"strconv"
+	"time"
 )
 
 type Service interface {
@@ -26,7 +27,7 @@ type Service interface {
 	SetRouteRule(*pb.RouteInfo) error
 
 	// 同步路由
-	SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error
+	SyncRoutes(stream pb.DiscoverService_SyncRoutesServer) error
 }
 
 // 定义中间键服务
@@ -104,24 +105,79 @@ func (s *DiscoverService) SetRouteRule(info *pb.RouteInfo) error {
 	return database.WriteToMysql(info)
 }
 
-func (s *DiscoverService) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
+func (s *DiscoverService) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer) error {
 	config.Logger.Println("[Info][discover] SyncRoutes begin")
-	if tools.SyncRouteUpdates == nil { // 确保通道已经初始化
-		return fmt.Errorf("SyncRouteUpdates channel is not initialized")
-	}
+
+	// 创建一个通道，用于接收客户端发送的请求
+	clientRequests := make(chan *pb.RouteSyncRequest)
+
+	// 启动一个 goroutine 来处理客户端发送的请求
+	go func() {
+		for {
+			req, err := stream.Recv()
+
+			if err != nil {
+				if err == io.EOF {
+					close(clientRequests)
+					config.Logger.Println("[Info][discover] 断开连接~ end")
+					return
+				}
+				config.Logger.Println("[Error][discover] Failed to receive client request:", err)
+				return
+			}
+			//config.Logger.Printf("[Info][discover] ~~~~~~~~~~~~~~~~~~~~收到来自客户端的同步需求：Name长度:%v namePrefix长度：%v,时间戳：%v, NameNew长度：%v,namePrefixNew长度：%v\n",
+			//	len(req.Name), len(req.NamePrefix), req.LastSyncVersion, len(req.NameNew), len(req.NamePrefixNew))
+			clientRequests <- req
+		}
+
+	}()
 
 	for {
 		select {
-		case route, ok := <-tools.SyncRouteUpdates:
+		case req, ok := <-clientRequests:
 			if !ok {
-				return fmt.Errorf("SyncRouteUpdates channel closed")
+				config.Logger.Println("[Info][discover] Client closed the connection")
+				return nil
 			}
-			if err := stream.Send(route); err != nil {
+			// 处理客户端请求，例如更新客户端的版本号等
+			routes := database.SyncRoutesWithRouteSyncRequest(config.SyncRedisClient, req)
+			// 发送增量更新的路由信息给客户端
+			response := &pb.RouteSyncResponse{
+				Routes:     routes,                          // 假设 route 是 *pb.RouteInfo 类型
+				NewVersion: time.Now().Format(time.RFC3339), // 这里需要替换为实际的新版本号
+			}
+			if err := stream.Send(response); err != nil {
 				return err
 			}
+
 		case <-stream.Context().Done():
-			config.Logger.Println("[Info][discover] SyncRoutes end", req)
+			config.Logger.Println("[Info][discover] SyncRoutes end")
 			return stream.Context().Err()
 		}
 	}
 }
+
+//func (s *DiscoverService) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {
+//	config.Logger.Println("[Info][discover] SyncRoutes begin")
+//	if tools.SyncRouteUpdates == nil { // 确保通道已经初始化
+//		return fmt.Errorf("SyncRouteUpdates channel is not initialized")
+//	}
+//	// 监听所有mysql中更新或插入name = req.Name的路由
+//	// 设计dirty位
+//
+//	for {
+//		// 直接从redis里面读即可~
+//		select {
+//		case route, ok := <-tools.SyncRouteUpdates:
+//			if !ok {
+//				return fmt.Errorf("SyncRouteUpdates channel closed")
+//			}
+//			if err := stream.Send(route); err != nil {
+//				return err
+//			}
+//		case <-stream.Context().Done():
+//			config.Logger.Println("[Info][discover] SyncRoutes end", req)
+//			return stream.Context().Err()
+//		}
+//	}
+//}

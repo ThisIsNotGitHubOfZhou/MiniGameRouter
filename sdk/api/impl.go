@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/tools"
 	"sync"
+	"time"
 )
 
 type MiniClient struct {
@@ -43,9 +45,11 @@ type MiniClient struct {
 	discoverPoolSize   int
 
 	// TODO:缓存
-	routeCacheMu  sync.RWMutex
-	cache         map[string][]*discoverpb.RouteInfo // service到路由信息组的
-	prefixToIndex map[string][]int                   // service+前缀到下标的映射
+	routeCacheMu   sync.RWMutex
+	lastUpdateTime string
+	cache          map[string][]*discoverpb.RouteInfo // service到路由信息组的map,TODO:去重和效率之间的取舍（存路由信息）
+	cacheTime      map[string]time.Time               // service到最后更新时间的map,只有使用的时候才更新
+	prefixToIndex  map[string][]int                   // servicename+":"+前缀  ->下标的映射(下标指在同名的service中，路由信息组的下标,不存路由信息)
 }
 
 var _ service.RegisterService = (*MiniClient)(nil)
@@ -71,6 +75,7 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 		healthCheckPoolSize: 500,
 		discoverFlag:        0,
 		discoverPoolSize:    1000,
+		lastUpdateTime:      "",
 	}
 }
 
@@ -124,6 +129,9 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 }
 
 func (c *MiniClient) Close() {
+	// 退出反注册
+	ctx := context.Background()
+	c.DeRegister(ctx, c.id, c.name, c.host, c.port)
 	for i := 0; i < len(c.RegisterGRPCPools); i++ {
 		c.RegisterGRPCPools[i].Close()
 	}
@@ -135,6 +143,7 @@ func (c *MiniClient) Close() {
 	for i := 0; i < len(c.DiscoverGRPCPools); i++ {
 		c.DiscoverGRPCPools[i].Close()
 	}
+
 }
 
 func (c *MiniClient) Name() string {
