@@ -87,7 +87,7 @@ func hashStringToRange(s string, max int) int {
 }
 
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
-
+	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithName]  Name: %v\n", name)
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(name, 4)<<3 + 0
 	endDBID := (hashStringToRange(name, 4)+1)<<3 + 0
@@ -142,7 +142,7 @@ func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
 }
 
 func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
-
+	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithName] name: %v, prfix: %v\n", name, prefix)
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange(prefix, 8)
 

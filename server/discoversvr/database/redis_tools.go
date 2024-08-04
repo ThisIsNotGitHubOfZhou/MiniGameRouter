@@ -36,7 +36,7 @@ func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string
 func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 	ctx := context.Background() // 创建一个上下文
 
-	config.Logger.Printf("[Info][discover][redis] WriteSyncRoutes len: %v\n", len(routes))
+	//config.Logger.Printf("[Info][discover][redis] WriteSyncRoutes len: %v\n", len(routes))
 	for _, route := range routes {
 		cacheInfo := make(map[string]string)
 		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
@@ -111,20 +111,20 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 	for _, key := range req.Name {
 		redisData, exist := readCacheWithName(client, key, req.LastSyncVersion)
 		if len(redisData) > 0 || exist {
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest name，从redis同步成功：", len(redisData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] name从redis同步成功：", len(redisData), key)
 			res = append(res, redisData...)
 		} else {
 			// 从mysql里面读
 			mysqlData, err := ReadFromMysqlWithName(key)
 			if err != nil {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
 				continue
 			}
 			if len(mysqlData) == 0 {
 				config.Logger.Println("[Warning][discover][redis]   mysql里面路由被删了(name):", key)
 				continue
 			}
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest name，从mysql同步成功：", len(mysqlData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] name从mysql同步成功：", len(mysqlData), key)
 			res = append(res, mysqlData...)
 		}
 
@@ -133,7 +133,7 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 	for _, key := range req.NamePrefix {
 		redisData, exist := readCacheWithNamePrefix(client, key, req.LastSyncVersion)
 		if len(redisData) > 0 || exist {
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NamePrefix，从redis同步成功：", len(redisData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] NamePrefix从redis同步成功：", len(redisData), key)
 			res = append(res, redisData...)
 		} else {
 			// 从mysql里面读
@@ -141,20 +141,20 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 			// 提取出name和prefix
 			parts := strings.Split(key, ":")
 			if len(parts) != 2 {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败,request.NamePrefix格式不对:", key)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败,request.NamePrefix格式不对:", key)
 				continue
 			}
 			name, prefix := parts[0], parts[1]
 			mysqlData, err := ReadFromMysqlWithPrefix(name, prefix)
 			if err != nil {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
 				continue
 			}
 			if len(mysqlData) == 0 {
-				config.Logger.Println("[Warning][discover][redis]   mysql里面路由被删了(nameprefix):", key)
+				config.Logger.Println("[Warning][discover][redis][SyncRoutesWithRouteSyncRequest]   mysql里面路由被删了(nameprefix):", key)
 				continue
 			}
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NamePrefix，从mysql同步成功：", len(mysqlData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] NamePrefix，从mysql同步成功：", len(mysqlData), key)
 			res = append(res, mysqlData...)
 		}
 
@@ -164,20 +164,20 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 	for _, key := range req.NameNew {
 		redisData, exist := readCacheWithName(client, key, "")
 		if len(redisData) > 0 || exist {
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NameNew，从redis同步成功：", len(redisData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest]  NameNew从redis同步成功：", len(redisData), key)
 			res = append(res, redisData...)
 		} else {
 			// 从mysql里面读
 			mysqlData, err := ReadFromMysqlWithName(key)
 			if err != nil {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
 				continue
 			}
 			if len(mysqlData) == 0 {
-				config.Logger.Println("[Warning][discover][redis]   mysql里面路由被删了(name new):", key)
+				config.Logger.Println("[Warning][discover][redis][SyncRoutesWithRouteSyncRequest]   mysql里面路由被删了(name new):", key)
 				continue
 			}
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NameNew，从mysql同步成功：", len(mysqlData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] NameNew从mysql同步成功：", len(mysqlData), key)
 			res = append(res, mysqlData...)
 		}
 
@@ -186,7 +186,7 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 	for _, key := range req.NamePrefixNew {
 		redisData, exist := readCacheWithNamePrefix(client, key, "")
 		if len(redisData) > 0 || exist {
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NamePrefixNew，从redis同步成功：", len(redisData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] NamePrefixNew，从redis同步成功：", len(redisData), key)
 			res = append(res, redisData...)
 		} else {
 			// 从mysql里面读
@@ -194,20 +194,20 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 			// 提取出name和prefix
 			parts := strings.Split(key, ":")
 			if len(parts) != 2 {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败,request.NamePrefix格式不对:", key)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败,request.NamePrefix格式不对:", key)
 				continue
 			}
 			name, prefix := parts[0], parts[1]
 			mysqlData, err := ReadFromMysqlWithPrefix(name, prefix)
 			if err != nil {
-				config.Logger.Println("[Error][discover][redis]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
+				config.Logger.Println("[Error][discover][redis][SyncRoutesWithRouteSyncRequest]   redis cache失败ReadFromMysqlWithName，从mysql读出错:", err)
 				continue
 			}
 			if len(mysqlData) == 0 {
-				config.Logger.Println("[Warning][discover][redis]   mysql里面路由被删了(nameprefix new):", key)
+				config.Logger.Println("[Warning][discover][redis][SyncRoutesWithRouteSyncRequest]   mysql里面路由被删了(nameprefix new):", key)
 				continue
 			}
-			config.Logger.Println("[Info][discover][redis]   SyncRoutesWithRouteSyncRequest NamePrefixNew，从mysql同步成功：", len(mysqlData), key)
+			config.Logger.Println("[Info][discover][redis][SyncRoutesWithRouteSyncRequest] NamePrefixNew从mysql同步成功：", len(mysqlData), key)
 			res = append(res, mysqlData...)
 		}
 
