@@ -10,14 +10,14 @@ import (
 )
 
 // 服务注册测试并发
-// NOTE:8.1 30s5w
+// NOTE:8.1 21.20s5w
 func TestRegisterFunction(t *testing.T) {
 	var wg sync.WaitGroup
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // 设置超时
 	defer cancel()
 
-	client.RegisterServerInfo = []string{"localhost:20001", "localhost:20002", "localhost:20003", "localhost:20004", "localhost:20005"}
+	client.RegisterServerInfo = []string{"localhost:20001", "localhost:20002", "localhost:20003"} //, "localhost:20004", "localhost:20005"
 
 	err := client.InitConfig()
 	if err != nil {
@@ -58,6 +58,6 @@ func TestRegisterFunction(t *testing.T) {
 		}
 	}
 
-	client.Close()
+	//client.Close()
 	t.Log("All goroutines have completed.")
 }

@@ -52,7 +52,7 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 	}
 	response, err := ep(ctx, request)
 	if err != nil {
-		fmt.Println("sdk_api_impl_Register grpc error", err)
+		fmt.Println("[Error][sdk] grpc error", err)
 		return "", err
 	}
 	r := response.(*registerpb.RegisterResponse)

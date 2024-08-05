@@ -38,7 +38,7 @@ func TestDiscoverFunction(t *testing.T) {
 
 	// 服务注册~~~~~~~~~~~~~~
 	//client.RegisterServerInfo = []string{"localhost:20001", "localhost:20002", "localhost:20003", "localhost:20004", "localhost:20005"}
-	client.DiscoverServerInfo = []string{"localhost:40001"} //, "localhost:40002", "localhost:40003"
+	client.DiscoverServerInfo = []string{"localhost:40001", "localhost:40002", "localhost:40003"} //,
 
 	err := client.InitConfig()
 	if err != nil {
@@ -57,7 +57,7 @@ func TestDiscoverFunction(t *testing.T) {
 	//~~~~~~~~~~~~~~~~
 
 	// 路由设置~~~~~~~~~~~~~~~~~~
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	var mu sync.Mutex
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tempRoute := &discoverpb.RouteInfo{
@@ -68,37 +68,40 @@ func TestDiscoverFunction(t *testing.T) {
 		Metadata: "{}",
 	}
 	for i := 0; i < 100000; i++ {
-		//wg.Add(1)
-		//go func() {
-		//	defer wg.Done()
-		//	//randStr := randomString(5, rng, &mu)
-		//	//
-		//	//tempRoute.Name = randStr
-		//	//
-		//	//randStr = randomString(5, rng, &mu)
-		//	//
-		//	//tempRoute.Prefix = randStr
-		//	//err = client.SetRouteRule(ctx, tempRoute)
-		//	//if err != nil {
-		//	//	t.Errorf("SetRouteRule error : %v", err)
-		//	//}
-		//}()
-		randStr := randomString(10, rng, &mu)
+		// 并行~~~~~~~~~~~~~~~~~~~~~
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			randStr := randomString(10, rng, &mu)
 
-		tempRoute.Name = randStr
+			tempRoute.Name = randStr
 
-		randStr = randomString(10, rng, &mu)
+			randStr = randomString(10, rng, &mu)
 
-		tempRoute.Prefix = randStr
-		err = client.SetRouteRule(ctx, tempRoute)
-		if err != nil {
-			t.Errorf("SetRouteRule error : %v", err)
-		}
+			tempRoute.Prefix = randStr
+			err = client.SetRouteRule(ctx, tempRoute)
+			if err != nil {
+				t.Errorf("SetRouteRule error : %v", err)
+			}
+		}()
+
+		// 线性~~~~~~~~~~~~~~~~
+		//randStr := randomString(10, rng, &mu)
+		//
+		//tempRoute.Name = randStr
+		//
+		//randStr = randomString(10, rng, &mu)
+		//
+		//tempRoute.Prefix = randStr
+		//err = client.SetRouteRule(ctx, tempRoute)
+		//if err != nil {
+		//	t.Errorf("SetRouteRule error : %v", err)
+		//}
 	}
 
-	//wg.Wait()
+	wg.Wait()
 
-	// 查询路由
+	// 查询路由~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//tempRoute = &discoverpb.RouteInfo{
 	//	Name:     "zcf_service",
 	//	Host:     "0.0.0.0",
