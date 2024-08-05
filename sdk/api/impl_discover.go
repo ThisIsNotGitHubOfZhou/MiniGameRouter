@@ -268,6 +268,7 @@ func (c *MiniClient) putRouteWithPrefixToCache(name string, prefix string, route
 	if c.prefixToIndex == nil {
 		c.prefixToIndex = make(map[string][]int)
 	}
+	fmt.Println("[Info][sdk] ~~~~~~~~~~~~~putRouteWithPrefixToCache", name, prefix, routes)
 	c.cache[name] = append(c.cache[name], routes...)
 	c.cacheTime[name] = time.Now()
 	for i, route := range routes {

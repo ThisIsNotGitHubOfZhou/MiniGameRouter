@@ -92,6 +92,8 @@ func LoopRefreshSvrCache(client *redis.Client) {
 				ReadFromMysqlWithName(parts[1])
 				continue
 			} else if len(parts) == 3 {
+				// TODO: 这里会有问题：一定会更新redis cache里面的版本，变得更新,最好是通过消息队列完成
+				ReadFromMysqlWithName(parts[1]) // Note:这里是为了确保在所有服务都是带有前缀的时候，能正确拉取相同服务名的路由~
 				// TODO: 这里会有问题：一定会更新redis cache里面的版本，变得更新
 				ReadFromMysqlWithPrefix(parts[1], parts[2])
 				continue
@@ -100,7 +102,7 @@ func LoopRefreshSvrCache(client *redis.Client) {
 			}
 		}
 
-		time.Sleep(20 * time.Second) // TODO：配置化
+		time.Sleep(2 * time.Second) // TODO：配置化
 	}
 
 }

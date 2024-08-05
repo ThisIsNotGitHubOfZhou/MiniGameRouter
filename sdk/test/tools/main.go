@@ -48,7 +48,7 @@ func FlushAll1() {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "21.6.163.18:6380", // Redis 地址
 		Password: "664597599Zcf!",    // Redis 密码，没有则留空
-		DB:       0,                  // 使用的数据库，默认为0
+		DB:       1,                  // 使用的数据库，默认为0
 	})
 
 	// 使用 SCAN 命令逐步扫描键
