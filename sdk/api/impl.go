@@ -6,6 +6,7 @@ import (
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/tools"
+	"github.com/stathat/consistent"
 	"sync"
 	"time"
 )
@@ -43,6 +44,7 @@ type MiniClient struct {
 	DiscoverGRPCPools  []*tools.GRPCPool
 	discoverLock       sync.Mutex
 	discoverPoolSize   int
+	consistentHash     *consistent.Consistent // 访问discover采用一致性哈希算法
 
 	// 缓存
 	routeCacheMu   sync.RWMutex
@@ -112,6 +114,8 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 
 	// 初始化discover连接池
 	// NOTE:注意DiscoverServerInfo要被初始化！
+
+	c.consistentHash = consistent.New() // 初始化一致性hash
 	if c.DiscoverServerInfo == nil {
 		fmt.Println("[Error][sdk] DiscoverServerInfo没有初始化~")
 		//return fmt.Errorf("DiscoverServerInfo not init")
@@ -123,6 +127,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 			return err
 		}
 		c.DiscoverGRPCPools = append(c.DiscoverGRPCPools, tool)
+		c.consistentHash.Add(fmt.Sprintf("%d", i))
 	}
 
 	return nil

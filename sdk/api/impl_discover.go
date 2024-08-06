@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"io"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -177,18 +178,20 @@ func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*
 	}
 
 	fmt.Println("[Info][sdk] GetRouteInfoWithName，获取路由:", name)
-	// 轮询服务
-	c.discoverLock.Lock()
-	c.discoverFlag++
-	tempFlag := c.discoverFlag
-	c.discoverLock.Unlock()
+	// 一致性哈希
+	poolIndexStr, err := c.consistentHash.Get(name)
+	poolIndex, err := strconv.Atoi(poolIndexStr)
+	if err != nil {
+		fmt.Println("[Error][sdk] 一致性哈希获取服务池索引错误:", err)
+		return nil, err
+	}
 
 	if len(c.DiscoverGRPCPools) == 0 {
 		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
 		return nil, fmt.Errorf("DiscoverGRPCPools empty")
 	}
-	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
-	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
+	conn, err := c.DiscoverGRPCPools[poolIndex].Get() // 优化后
+	defer c.DiscoverGRPCPools[poolIndex].Put(conn)
 	if err != nil {
 		return nil, err
 	}
