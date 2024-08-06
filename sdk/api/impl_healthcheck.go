@@ -72,50 +72,41 @@ func decodeGRPCHealthCheckSResponse(_ context.Context, response interface{}) (in
 	return resp, nil
 }
 
-// TODO:优化GRPC连接问题
 func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string, timeout int) error {
-
 	go func() {
-		// 轮询服务
-		c.healthCheckLock.Lock()
-		c.healthCheckFlag++
-		tempFlag := c.registerFlag
-		c.healthCheckLock.Unlock()
-
-		if len(c.HealthCheckGRPCPools) == 0 {
-			fmt.Println("[Error][sdk] HealthCheckGRPCPools为空")
-			return
-		}
-		conn, err := c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Get() // 优化后
-		defer c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Put(conn)
-
-		//conn, err := grpc.Dial(HealthCheckGrpcHost+":"+HealthCheckGrpcPort, grpc.WithInsecure())
-		if err != nil {
-			fmt.Println("[Error][sdk] gprc连接问题：", err)
-			return
-		}
-		//defer conn.Close()
-
-		//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
-
-		//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		var ep = grpctransport.NewClient(
-			conn,
-			"healthcheck.HealthCheckService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
-			"HealthCheckC",                   // 方法名称
-			encodeGRPCHealthCheckCRequest,
-			decodeGRPCHealthCheckCResponse,
-			healthcheckpb.HealthCheckCResponse{},
-			//clientTracer,
-		).Endpoint()
 		ticker := time.NewTicker(3 * time.Duration(c.timeout) * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ticker.C:
-				// 使用端点进行调用grpc
+				// 轮询服务
+				c.healthCheckLock.Lock()
+				c.healthCheckFlag++
+				tempFlag := c.registerFlag
+				c.healthCheckLock.Unlock()
 
+				if len(c.HealthCheckGRPCPools) == 0 {
+					fmt.Println("[Error][sdk] HealthCheckGRPCPools为空")
+					return
+				}
+
+				conn, err := c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Get()
+				if err != nil {
+					fmt.Println("[Error][sdk] gprc连接问题：", err)
+					return
+				}
+
+				var ep = grpctransport.NewClient(
+					conn,
+					"healthcheck.HealthCheckService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
+					"HealthCheckC",                   // 方法名称
+					encodeGRPCHealthCheckCRequest,
+					decodeGRPCHealthCheckCResponse,
+					healthcheckpb.HealthCheckCResponse{},
+				).Endpoint()
+
+				// 使用端点进行调用grpc
 				request := &healthcheckpb.HealthCheckCRequest{
 					Id:      id,
 					Name:    name,
@@ -127,12 +118,19 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 				response, err := ep(ctx, request)
 				if err != nil {
 					fmt.Println("[Error][sdk] healthcheckc grpc 出错：", err)
+					c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Put(conn)
 					return
 				}
 				r := response.(*healthcheckpb.HealthCheckCResponse)
 				if r.ErrorMes != "" {
+					fmt.Println("[Error][sdk] healthcheckc 返回错误信息：", r.ErrorMes)
+					c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Put(conn)
 					return
 				}
+
+				// 确保连接在每次循环结束时被放回池中
+				c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Put(conn)
+
 			case <-ctx.Done():
 				fmt.Println("[Info][sdk] HealthCheckC loop stopped")
 				return
@@ -141,7 +139,6 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 	}()
 
 	return nil
-
 }
 
 func encodeGRPCHealthCheckCRequest(_ context.Context, request interface{}) (interface{}, error) {
