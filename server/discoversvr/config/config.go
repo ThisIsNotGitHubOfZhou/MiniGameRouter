@@ -17,9 +17,19 @@ var Logger *log.Logger
 var KitLogger kitlog.Logger
 
 var (
-	RedisClient      *redis.Client
-	SyncRedisClient  *redis.Client // 用Host-Port:Name:prefix的格式作为Key
+	// Redis相关
+	RedisClient     *redis.Client
+	SyncRedisClient *redis.Client // 用Host-Port:Name:prefix的格式作为Key
+	RedisPoolSize   int
+	RedisTimeout    int
+
+	// Mysql相关
 	MysqlClient      *sql.DB
+	MysqlConnNum     int
+	MysqlIdleConnNum int
+	NameSplitSize    int
+	PrefixSplitSize  int
+
 	DiscoverGrpcHost string
 	DiscoverGrpcPort string
 	IsK8s            bool
@@ -44,30 +54,39 @@ func init() {
 	// 定义命令行标志
 	flag.StringVar(&DiscoverGrpcHost, "host", "10.76.143.1", "The host to discover grpc")
 	flag.StringVar(&DiscoverGrpcPort, "port", "40001", "The port to discover grpc")
+
+	// redis相关
+	flag.IntVar(&RedisPoolSize, "redisPoolSize", 3000, "The RedisPoolSize to discover grpc")
+	flag.IntVar(&RedisTimeout, "redisTimeout", 20, "The RedisTimeout to discover grpc")
+
+	// mysql相关
+	flag.IntVar(&MysqlConnNum, "mysqlConnNum", 5000, "The MysqlConnNum to discover grpc")
+	flag.IntVar(&MysqlIdleConnNum, "mysqlIdleConnNum", 4500, "The MysqlIdleConnNum to discover grpc")
+	flag.IntVar(&NameSplitSize, "nameSplitSize", 2, "The NameSplitSize to discover grpc")
+	flag.IntVar(&PrefixSplitSize, "prefixSplitSize", 3, "The PrefixSplitSize to discover grpc")
+
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
 
 	// 解析命令行标志
 	flag.Parse()
 
-	// TODO:参数配置化
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:        "21.6.163.18:6380", // Redis 地址
-		Password:    "664597599Zcf!",    // Redis 密码，没有则留空
-		DB:          0,                  // 使用的数据库，默认为0
-		PoolSize:    3000,               // 连接池大小
-		PoolTimeout: 20 * time.Second,   //连接池等待时间
+		Addr:        "21.6.163.18:6380",                        // Redis 地址
+		Password:    "664597599Zcf!",                           // Redis 密码，没有则留空
+		DB:          0,                                         // 使用的数据库，默认为0
+		PoolSize:    RedisPoolSize,                             // 连接池大小
+		PoolTimeout: time.Duration(RedisTimeout) * time.Second, //连接池等待时间
 	})
 
 	SyncRedisClient = redis.NewClient(&redis.Options{
-		Addr:        "21.6.163.18:6380", // Redis 地址
-		Password:    "664597599Zcf!",    // Redis 密码，没有则留空
-		DB:          1,                  // 使用的数据库，同步数据库
-		PoolSize:    3000,               // 连接池大小
-		PoolTimeout: 20 * time.Second,   //连接池等待时间
+		Addr:        "21.6.163.18:6380",                        // Redis 地址
+		Password:    "664597599Zcf!",                           // Redis 密码，没有则留空
+		DB:          1,                                         // 使用的数据库，同步数据库
+		PoolSize:    RedisPoolSize,                             // 连接池大小
+		PoolTimeout: time.Duration(RedisTimeout) * time.Second, //连接池等待时间
 	})
 
 	// mysql
-	// TODO:参数配置化
 	dsn := fmt.Sprintf("root:664597599Zcf!@tcp(9.134.206.110:3306)/route_db")
 	var err error
 	MysqlClient, err = sql.Open("mysql", dsn)
@@ -75,9 +94,9 @@ func init() {
 		Logger.Println("[Error][discover]Failed to connect to database route_db: ", err)
 	}
 
-	MysqlClient.SetMaxOpenConns(1000)         // 设置最大打开连接数
-	MysqlClient.SetMaxIdleConns(800)          // 设置最大空闲连接数
-	MysqlClient.SetConnMaxLifetime(time.Hour) // 设置连接的最大生命周期
+	MysqlClient.SetMaxOpenConns(MysqlConnNum)        // 设置最大打开连接数
+	MysqlClient.SetMaxIdleConns(MysqlIdleConnNum)    // 设置最大空闲连接数
+	MysqlClient.SetConnMaxLifetime(30 * time.Minute) // 设置连接的最大生命周期
 
 }
 

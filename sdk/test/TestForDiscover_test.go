@@ -29,6 +29,7 @@ func randomString(length int, rng *rand.Rand, mu *sync.Mutex) string { //加锁�
 
 // NOTE 8_2 300s 100w,并行
 // NOTE 8_2 30s 10w，并行
+// NOTE 8_6 150s 50w,并行
 // NOTE:这里只能线性，不线性randomString会出现很多重复
 // TODO:线性会出错~
 
@@ -36,8 +37,6 @@ func TestDiscoverFunction(t *testing.T) {
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)
 	ctx := context.Background()
 
-	// 服务注册~~~~~~~~~~~~~~
-	//client.RegisterServerInfo = []string{"localhost:20001", "localhost:20002", "localhost:20003", "localhost:20004", "localhost:20005"}
 	client.DiscoverServerInfo = []string{"localhost:40001", "localhost:40002", "localhost:40003"} //,
 
 	err := client.InitConfig()
@@ -45,18 +44,6 @@ func TestDiscoverFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//服务发现~~~~~~~~~~~~~~~
-	//service_name, err := client.DiscoverServiceWithName(ctx, "zcf_service")
-	//if err != nil {
-	//	t.Fatal("[Error][test] DiscoverServiceWithName error", err)
-	//}
-	//for _, val := range service_name {
-	//	t.Log("[Info][test] DiscoverServiceWithName val", val)
-	//	time.Sleep(1 * time.Second)
-	//}
-	//~~~~~~~~~~~~~~~~
-
-	// 路由设置~~~~~~~~~~~~~~~~~~
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -68,7 +55,7 @@ func TestDiscoverFunction(t *testing.T) {
 		Metadata: "{}",
 	}
 	for i := 0; i < 100000; i++ {
-		// 并行~~~~~~~~~~~~~~~~~~~~~
+		// 并行~~~~~~~~~~~~~~~~~~~~~(由于并行会导致随机到相同值，所以分片就会退化成未分片)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -101,32 +88,6 @@ func TestDiscoverFunction(t *testing.T) {
 
 	wg.Wait()
 
-	// 查询路由~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//tempRoute = &discoverpb.RouteInfo{
-	//	Name:     "zcf_service",
-	//	Host:     "0.0.0.0",
-	//	Port:     "666",
-	//	Prefix:   "yesyes",
-	//	Metadata: "{}",
-	//}
-	//err = client.SetRouteRule(ctx, tempRoute)
-	//if err != nil {
-	//	t.Errorf("SetRouteRule error : %v", err)
-	//}
-	//
-	//routeInfo, err := client.GetRouteInfoWithName(ctx, "zcf_service")
-	//if err != nil {
-	//	t.Errorf("[Error][test] DiscoverServiceWithName error : %v", err)
-	//}
-	//for _, val := range routeInfo {
-	//	t.Log("[Info][test] GetRouteInfoWithName val", val)
-	//	time.Sleep(1 * time.Second)
-	//}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~
-
 	client.Close()
-
-	//client.DeRegister(ctx, client.ID(), client.Name(), client.Host(), client.Port())
 
 }

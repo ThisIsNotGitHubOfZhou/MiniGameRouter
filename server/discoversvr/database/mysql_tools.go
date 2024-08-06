@@ -16,7 +16,7 @@ var dbPoolsMutex sync.RWMutex
 // 初始化数据库连接池
 // TODO:优化这个部分~高并发不会出现冲突+性能
 // TODO:优化快照读写~
-// TODO:分片个数配置化~
+// NOTE:分片个数配置化~
 //func init() {
 //	dbPools = make(map[int]*sql.DB)
 //	for i := 0; i < 32; i++ { // 假设有 32 个分片
@@ -32,11 +32,57 @@ var dbPoolsMutex sync.RWMutex
 //	}
 //}
 
+// 计算幂函数
+func intPow(base, exponent int) int {
+	result := 1
+	for exponent > 0 {
+		if exponent%2 == 1 {
+			result *= base
+		}
+		base *= base
+		exponent /= 2
+	}
+	return result
+}
+
+func InitMysql() {
+	query := `
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_schema = ? AND table_name = ?
+    `
+	var count int
+	dbMaxID := intPow(2, config.NameSplitSize)*intPow(2, config.PrefixSplitSize) - 1
+	dbMaxIDStr := strconv.Itoa(dbMaxID)
+	err := config.MysqlClient.QueryRow(query, "route_db", "route_info"+dbMaxIDStr).Scan(&count)
+	if err != nil {
+		config.Logger.Fatalf("[Error][discover][mysql] Failed to query RouteInfo table: %v\n", err)
+		return
+	}
+	if count > 0 {
+		config.Logger.Println("[Info][discover][mysql] RouteInfo table already exists")
+	} else {
+		config.Logger.Printf("[Info][discover][mysql] RouteInfo table route_info%v not exists\n", dbMaxIDStr)
+		// 使用create like  route_info来创建到dbMaxID号表
+
+		for dbID := 0; dbID <= dbMaxID; dbID++ {
+			daIDStr := strconv.Itoa(dbID)
+			createTableQuery := fmt.Sprintf("CREATE TABLE IF NOT EXISTS route_info%s LIKE route_info", daIDStr)
+			_, err := config.MysqlClient.Exec(createTableQuery)
+			if err != nil {
+				config.Logger.Fatalf("[Error][discover][mysql] Failed to create RouteInfo table: %v\n", err)
+				return
+			}
+			config.Logger.Println("[Info][discover][mysql] RouteInfo table created successfully")
+		}
+
+	}
+}
 func WriteToMysql(info *pb.RouteInfo) error {
 	// 组合shardingKey:info.Name生成2位，info.Prefix生成三位，组合在一起生成五位
 
 	// 根据shardingkey选择分片
-	dbID := hashStringToRange(info.Name, 4)<<3 + hashStringToRange(info.Prefix, 8)
+	dbID := hashStringToRange(info.Name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + hashStringToRange(info.Prefix, intPow(2, config.PrefixSplitSize))
 
 	config.Logger.Printf("[Info][discover][mysql] WriteToMysql Name: %v, Prefix: %v, DB_ID: %v\n",
 		info.Name, info.Prefix, strconv.FormatInt(int64(dbID), 2))
@@ -89,8 +135,8 @@ func hashStringToRange(s string, max int) int {
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithName]  Name: %v\n", name)
 	// 根据shardingkey选择分片
-	dbID := hashStringToRange(name, 4)<<3 + 0
-	endDBID := (hashStringToRange(name, 4)+1)<<3 + 0
+	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + 0
+	endDBID := (hashStringToRange(name, intPow(2, config.NameSplitSize))+1)<<config.PrefixSplitSize + 0
 
 	var res []*pb.RouteInfo
 	// TODO:这里耗时较大重点优化~
@@ -144,7 +190,7 @@ func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
 func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
 	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithPrefix] name: %v, prfix: %v\n", name, prefix)
 	// 根据shardingkey选择分片
-	dbID := hashStringToRange(name, 4)<<3 + hashStringToRange(prefix, 8)
+	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + hashStringToRange(prefix, intPow(2, config.PrefixSplitSize))
 
 	//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",
 	//	name, prefix, strconv.FormatInt(int64(dbID), 2))

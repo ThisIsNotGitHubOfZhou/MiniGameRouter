@@ -18,6 +18,8 @@ import (
 )
 
 func main() {
+	// 初始化DB
+	database.InitMysql()
 
 	errChan := make(chan error)
 
