@@ -166,16 +166,21 @@ func hashStringToRange(s string, max int) int {
 
 func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithName]  Name: %v\n", name)
-	// 根据shardingkey选择分片
+	// TODO：需要先在redis里读吗,注意别造成循环引用！因为现在读redis可能会调用这个函数~
+	if !config.IsK8s {
+		config.ReadRouteTotalTimes.Inc()
+	}
+	// 根据sharding key选择分片
 	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + 0
 	endDBID := (hashStringToRange(name, intPow(2, config.NameSplitSize))+1)<<config.PrefixSplitSize + 0
 
 	var res []*pb.RouteInfo
-	// TODO:这里耗时较大重点优化~
+
 	// 只提供name的话，需要遍历部分db
 	for i := dbID; i < endDBID; i++ {
-		//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithName Name: %v, DB_ID: %v",
-		//	name, strconv.FormatInt(int64(i), 2))
+		//startTime := time.Now()              // 记录开始时间
+		//elapsedTime := time.Since(startTime) // 计算耗时
+		//config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~ReadFromMysqlWithName耗时: %v\n", elapsedTime)
 		tempRes, err := readFromDBWithName(i, name)
 		if err != nil {
 			config.Logger.Println("[Error][discover][mysql] readFromDBWithName Error: ", err)
@@ -185,6 +190,7 @@ func ReadFromMysqlWithName(name string) ([]*pb.RouteInfo, error) {
 	}
 
 	// 同步到内存
+	// TODO:这里耗时较大重点优化~
 	WriteSyncRoutes(config.SyncRedisClient, res)
 	return res, nil
 
@@ -219,9 +225,51 @@ func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
 	return routeInfos, nil
 }
 
+// NOTE:这是改进后，5w量级能有10%优化~
+//func readFromDBWithName(dbID int, name string) ([]*pb.RouteInfo, error) {
+//	tableName := fmt.Sprintf("route_info%d", dbID)
+//	query := fmt.Sprintf("SELECT name, host, port, prefix, metadata FROM %s WHERE name = ?", tableName)
+//
+//	// 使用预编译语句
+//	stmt, err := config.MysqlClient.Prepare(query)
+//	if err != nil {
+//		config.Logger.Println("[Error][discover][mysql] 预编译查询语句错误:", err)
+//		return nil, fmt.Errorf("failed to prepare query: %v", err)
+//	}
+//	defer stmt.Close()
+//
+//	rows, err := stmt.Query(name)
+//	if err != nil {
+//		config.Logger.Println("[Error][discover][mysql] 查询数据错误:", err)
+//		return nil, fmt.Errorf("failed to execute query: %v", err)
+//	}
+//	defer rows.Close()
+//
+//	var routeInfos []*pb.RouteInfo
+//	for rows.Next() {
+//		var routeInfo pb.RouteInfo
+//		if err := rows.Scan(&routeInfo.Name, &routeInfo.Host, &routeInfo.Port, &routeInfo.Prefix, &routeInfo.Metadata); err != nil {
+//			config.Logger.Println("[Error][discover][mysql] 扫描数据错误:", err)
+//			return nil, fmt.Errorf("failed to scan row: %v", err)
+//		}
+//		routeInfos = append(routeInfos, &routeInfo)
+//	}
+//
+//	if err := rows.Err(); err != nil {
+//		config.Logger.Println("[Error][discover][mysql] 读取数据错误:", err)
+//		return nil, fmt.Errorf("rows error: %v", err)
+//	}
+//
+//	return routeInfos, nil
+//}
+
 func ReadFromMysqlWithPrefix(name, prefix string) ([]*pb.RouteInfo, error) {
 	config.Logger.Printf("[Info][discover][mysql][ReadFromMysqlWithPrefix] name: %v, prfix: %v\n", name, prefix)
-	// 根据shardingkey选择分片
+	// TODO：需要先在redis里读吗,注意别造成循环引用！因为现在读redis可能会调用这个函数~
+	if !config.IsK8s {
+		config.ReadRouteTotalTimes.Inc()
+	}
+	// 根据sharding key选择分片
 	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + hashStringToRange(prefix, intPow(2, config.PrefixSplitSize))
 
 	//config.Logger.Printf("[Info][discover][mysql] ReadFromMysqlWithPrefix Name: %v, Prefix: %v, DB_ID: %v",

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// 服务注册测试并发
+// NOTE:服务注册测试并发
 // NOTE:8.1 21.20s5w
 func TestRegisterFunction(t *testing.T) {
 	var wg sync.WaitGroup

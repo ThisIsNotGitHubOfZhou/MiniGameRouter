@@ -51,7 +51,7 @@ func (mw *loggingMiddleware) DiscoverServiceWithID(instanceID string) (res []*pb
 func (mw *loggingMiddleware) GetRouteInfoWithName(name string) (res []*pb.RouteInfo, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
-			"function", "DiscoverServiceWithID",
+			"function", "GetRouteInfoWithName",
 			"name", name,
 			"route_len", len(res),
 			"took", time.Since(begin),

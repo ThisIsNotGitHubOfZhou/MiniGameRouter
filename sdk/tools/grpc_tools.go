@@ -36,6 +36,7 @@ func NewGRPCPool(target string, maxConns int) (*GRPCPool, error) {
 			}
 			return nil, fmt.Errorf("failed to create connection: %v", err)
 		}
+		fmt.Println("successfully created connection")
 		pool.clients = append(pool.clients, conn)
 	}
 

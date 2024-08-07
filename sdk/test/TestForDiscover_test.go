@@ -2,11 +2,9 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/api"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
 	"math/rand"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -34,6 +32,7 @@ func randomString(length int, rng *rand.Rand, mu *sync.Mutex) string { //加锁�
 // NOTE 8_6 150s 50w,并行
 // NOTE:这里只能线性，不线性randomString会出现很多重复
 // TODO:线性会出错~
+// NOTE:测试设置路由
 
 func TestDiscoverFunction(t *testing.T) {
 
@@ -86,7 +85,7 @@ func TestDiscoverFunction(t *testing.T) {
 
 		tempRoute.Prefix = randStr
 		err = client.SetRouteRule(ctx, tempRoute)
-		fmt.Printf("~~~~~~~~~~~Number of goroutines: %d\n", runtime.NumGoroutine())
+		//fmt.Printf("~~~~~~~~~~~Number of goroutines: %d\n", runtime.NumGoroutine())
 		if err != nil {
 			t.Errorf("SetRouteRule error : %v", err)
 			return

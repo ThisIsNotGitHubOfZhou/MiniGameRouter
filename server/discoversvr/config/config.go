@@ -7,6 +7,7 @@ import (
 	kitlog "github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"os"
 	"time"
@@ -33,6 +34,12 @@ var (
 	DiscoverGrpcHost string
 	DiscoverGrpcPort string
 	IsK8s            bool
+
+	// prometheus指标
+	PrometheusPort          string
+	ReadRouteTotalTimes     prometheus.Counter
+	ReadRouteFromMysqlTimes prometheus.Counter
+	ReadRouteFromRedisTimes prometheus.Counter
 )
 
 // TODO:引入下面的东西
@@ -41,27 +48,8 @@ var (
 //	ZipkinTracer *zipkin.Tracer
 //)
 
-// promethues指标
-//var (
-//	RequestsVote = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "vote_times_" + ServicePortString,
-//			Help: "Total number of vote requests.",
-//		},
-//	)
-//	RequestsResult = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "result_times_" + ServicePortString,
-//			Help: "Total number of vote result requests.",
-//		},
-//	)
-//)
-
 // init 函数在包初始化时自动执行
 func init() {
-	// TODO:监控
-	//prometheus.MustRegister(RequestsVote)
-	//prometheus.MustRegister(RequestsResult)
 
 	// 初始化标准库日志记录器
 	Logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -87,7 +75,11 @@ func init() {
 	flag.IntVar(&NameSplitSize, "nameSplitSize", 2, "The NameSplitSize to discover grpc")
 	flag.IntVar(&PrefixSplitSize, "prefixSplitSize", 3, "The PrefixSplitSize to discover grpc")
 
+	// 云服务
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
+
+	// prometheus相关
+	flag.StringVar(&PrometheusPort, "prometheusPort", "2112", "The port to prometheus")
 
 	// 解析命令行标志
 	flag.Parse()
@@ -119,5 +111,31 @@ func init() {
 	MysqlClient.SetMaxOpenConns(MysqlConnNum)        // 设置最大打开连接数
 	MysqlClient.SetMaxIdleConns(MysqlIdleConnNum)    // 设置最大空闲连接数
 	MysqlClient.SetConnMaxLifetime(30 * time.Minute) // 设置连接的最大生命周期
+
+	// prometheus监控
+	if !IsK8s {
+		ReadRouteFromMysqlTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "read_from_mysql_times_" + DiscoverGrpcPort,
+				Help: "Total times of read from mysql.",
+			},
+		)
+		ReadRouteFromRedisTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "read_from_redis_times_" + DiscoverGrpcPort,
+				Help: "Total times of read from redis.",
+			},
+		)
+		ReadRouteTotalTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "read_total_times_" + DiscoverGrpcPort,
+				Help: "Total times of read.",
+			},
+		)
+
+		prometheus.MustRegister(ReadRouteFromMysqlTimes)
+		prometheus.MustRegister(ReadRouteFromRedisTimes)
+		prometheus.MustRegister(ReadRouteTotalTimes)
+	}
 
 }

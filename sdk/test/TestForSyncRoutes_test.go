@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// NOTE:测试本地路由能不能按照预期更新
 func TestSyncRoutesFunction(t *testing.T) {
 
 	client := api.NewMiniClient("zcf_service", "10.76.143.", "6000", "grpc", "{'flag':true}", 10, 100000)
@@ -26,7 +27,7 @@ func TestSyncRoutesFunction(t *testing.T) {
 	go client.SyncCache() // 开始同步
 
 	t.Log("设置了一条路由 ")
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 	// 设置一条路由，这时候缓存里应该啥也没有
 	err = client.SetRouteRule(ctx, &discoverpb.RouteInfo{
 		Name:     "test",

@@ -33,8 +33,10 @@ func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string
 
 // ~~~~~~~~~~~~~~~~~~~~cache相关~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 写一份cache到redis，带时间戳的，读取的时候写入
+
 func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 	ctx := context.Background() // 创建一个上下文
+	startTime := time.Now()     // 记录开始时间
 
 	//config.Logger.Printf("[Info][discover][redis] WriteSyncRoutes len: %v\n", len(routes))
 	for _, route := range routes {
@@ -70,7 +72,51 @@ func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 			config.Logger.Printf("[Error][discover][reds]Failed to set expiration for key %s: %v\n", key, err)
 		}
 	}
+	elapsedTime := time.Since(startTime) // 计算耗时
+	config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~WriteSyncRoutes耗时: %v\n", elapsedTime)
 }
+
+// NOTE：!!!!!!!!!!超级大优化！！！！！！！！！
+//func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
+//	ctx := context.Background() // 创建一个上下文
+//	startTime := time.Now()     // 记录开始时间
+//
+//	// 使用管道批量执行 Redis 命令
+//	pipe := client.Pipeline()
+//
+//	for _, route := range routes {
+//		cacheInfo := make(map[string]string)
+//		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
+//		cacheInfo["name"] = route.Name
+//		cacheInfo["host"] = route.Host
+//		cacheInfo["port"] = route.Port
+//		cacheInfo["prefix"] = route.Prefix
+//		cacheInfo["metadata"] = route.Metadata
+//
+//		// 生成 Redis 键
+//		var key string
+//		if route.Prefix != "" {
+//			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
+//		} else {
+//			key = route.Host + "-" + route.Port + ":" + route.Name
+//		}
+//
+//		// 使用 HMSet 写入哈希表
+//		pipe.HMSet(ctx, key, cacheInfo)
+//
+//		// 设置过期时间为1小时
+//		pipe.Expire(ctx, key, time.Hour)
+//	}
+//
+//	// 执行管道中的命令
+//	_, err := pipe.Exec(ctx)
+//	if err != nil {
+//		config.Logger.Printf("[Error][discover][redis] Failed to execute pipeline: %v\n", err)
+//	}
+//
+//	elapsedTime := time.Since(startTime) // 计算耗时
+//	config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~WriteSyncRoutes耗时: %v\n", elapsedTime)
+//}
 
 // 定期从mysql里面读取新数据,强制刷新!!!!
 func LoopRefreshSvrCache(client *redis.Client) {
@@ -219,12 +265,12 @@ func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncReque
 	return res
 }
 
-// 从redis缓存里面读取name的cache（所有名字里带name的）, bool表示是否命中（命中一般且为空的话就是说明旧版数据）
+// 从redis缓存里面读取name的cache（所有名字里带name的）, bool表示是否命中（一般命中且为空的话就是说明旧版数据）
 func readCacheWithName(client *redis.Client, name string, lastSyncVersion string) ([]*pb.RouteInfo, bool) {
 	return readCache(client, "*"+name+"*", lastSyncVersion) // 需要全量匹配，去重由sdk去做吧~
 }
 
-// 从redis缓存里面读取name:prefix的cache, bool表示是否命中（命中一般且为空的话就是说明旧版数据）
+// 从redis缓存里面读取name:prefix的cache, bool表示是否命中（一般命中且为空的话就是说明旧版数据）
 func readCacheWithNamePrefix(client *redis.Client, namePrefix string, lastSyncVersion string) ([]*pb.RouteInfo, bool) {
 	return readCache(client, "*"+namePrefix, lastSyncVersion)
 }

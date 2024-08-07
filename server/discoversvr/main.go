@@ -9,9 +9,11 @@ import (
 	"discoversvr/service"
 	"discoversvr/transport"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -117,6 +119,18 @@ func main() {
 	//mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	//mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	//go func() { log.Fatal(http.ListenAndServe(config.PprofPort, mux)) }()
+
+	// 启动http服务暴露prometheus指标
+	// 启动一个 HTTP 服务器来暴露 Prometheus 指标
+	if !config.IsK8s {
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			err := http.ListenAndServe(":"+config.PrometheusPort, nil) // 2112 是常用的 Prometheus 端口
+			if err != nil {
+				config.Logger.Println("[Info][discover] prometheus指标服务器启动失败", err)
+			}
+		}()
+	}
 
 	go func() {
 		c := make(chan os.Signal, 1)

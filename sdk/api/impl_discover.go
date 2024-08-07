@@ -220,7 +220,7 @@ func (c *MiniClient) GetRouteInfoWithName(ctx context.Context, name string) ([]*
 	}
 	r := response.(*discoverpb.RouteInfosResponse)
 
-	fmt.Println("[Info][sdk]  GetRouteInfoWithName 结果", r)
+	fmt.Println("[Info][sdk]  GetRouteInfoWithName 结果", len(r.Routes))
 	if r.ErrorMes != "" {
 		fmt.Println("[Info][sdk]  GetRouteInfoWithName error", r.ErrorMes)
 	}
