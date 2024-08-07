@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -29,11 +28,7 @@ func NewGRPCPool(target string, maxConns int) (*GRPCPool, error) {
 
 	for i := 0; i < maxConns; i++ {
 
-		// 使用 context.WithTimeout 来设置连接超时
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		conn, err := grpc.DialContext(ctx, target, grpc.WithInsecure(), grpc.WithBlock())
+		conn, err := grpc.Dial(target, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5*time.Second)) // 阻塞5秒直到连接成功
 		if err != nil {
 			// 关闭已经创建的连接
 			for _, c := range pool.clients {

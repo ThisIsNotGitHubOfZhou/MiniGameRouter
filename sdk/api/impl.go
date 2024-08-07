@@ -76,7 +76,7 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 		healthCheckFlag:     0,
 		healthCheckPoolSize: 500,
 		discoverFlag:        0,
-		discoverPoolSize:    2000,
+		discoverPoolSize:    1000,
 		lastUpdateTime:      "",
 	}
 }
