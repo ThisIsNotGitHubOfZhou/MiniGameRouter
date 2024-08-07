@@ -25,7 +25,7 @@ func NewGRPCPool(target string, maxConns int) (*GRPCPool, error) {
 		target:   target,
 	}
 	pool.cond = sync.NewCond(&pool.mu)
-
+	// TODO：这里重试一下，有时候连接会满
 	for i := 0; i < maxConns; i++ {
 
 		conn, err := grpc.Dial(target, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5*time.Second)) // 阻塞5秒直到连接成功

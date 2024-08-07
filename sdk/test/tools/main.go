@@ -7,6 +7,8 @@ import (
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
+	"math/rand"
+	"time"
 )
 
 var ctx = context.Background()
@@ -134,17 +136,75 @@ func GetTotalRowCount() (int, error) {
 	return total, nil
 }
 
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// 随机生成指定长度的字符串
+func randomString(length int, rng *rand.Rand) string { //加锁是防止生成相同字符
+	result := make([]byte, length)
+
+	for i := range result {
+		// 生成一个随机索引
+		index := rng.Intn(len(charset))
+		// 从字符集中选择字符
+		result[i] = charset[index]
+	}
+	return string(result)
+}
+
+// 随机写total条数据到MySQL
+func WriteRandomRouteToMysql(total int) error {
+	// 数据库连接字符串
+	dsn := fmt.Sprintf("root:664597599Zcf!@tcp(9.134.206.110:3306)/route_db")
+
+	// 创建数据库连接
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for j := 0; j < total; j += 32 {
+		for i := 0; i <= 31; i++ {
+			tableName := fmt.Sprintf("route_info%d", i)
+
+			query := fmt.Sprintf("INSERT INTO %s (name, host, port, prefix, metadata) VALUES (?, ?, ?, ?, ?)", tableName)
+			//config.Logger.Printf("[Info][discover][mysql] 执行写入命令：%v\n", query)
+			if db == nil {
+				fmt.Println("db is nil")
+				return fmt.Errorf("db is nil")
+			}
+			_, err = db.Exec(query, randomString(10, rng), "0.0.0.0", "666", randomString(10, rng), "{}")
+			if err != nil {
+				fmt.Println("插入数据错误:", err)
+				return fmt.Errorf("failed to execute query: %v", err)
+			}
+			fmt.Println("插入数据:", j+i)
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	// 清空redis
 	FlushAll0()
 	FlushAll1()
-
 	// 统计总行数
 	total, err := GetTotalRowCount()
 	if err != nil {
 		log.Fatalf("Failed to get total row count: %v", err)
 	}
 	fmt.Printf("Total row count: %d\n", total)
+
 	// 清空mysql
-	FlushMysql()
+	//FlushMysql()
+
+	// 写1千万数据到mysql
+	//err = WriteRandomRouteToMysql(10000000)
+	//if err != nil {
+	//	fmt.Printf("Failed to write random route to mysql: %v", err)
+	//}
+
 }

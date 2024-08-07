@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// 全流程走一遍
+// NOTE:全流程走一遍
 func TestAllFunction(t *testing.T) {
 
 	client := api.NewMiniClient("zcf_service", "localhost.", "6000", "grpc", "{'flag':true}", 10, 15)
