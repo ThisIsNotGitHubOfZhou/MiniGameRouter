@@ -120,7 +120,7 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 		fmt.Println("[Error][sdk] DiscoverServerInfo没有初始化~")
 		//return fmt.Errorf("DiscoverServerInfo not init")
 	}
-	// TODO：这里重试一下，有时候连接会满
+
 	for i := 0; i < len(c.DiscoverServerInfo); i++ {
 		tool, err := tools.NewGRPCPool(c.DiscoverServerInfo[i], c.discoverPoolSize)
 		if err != nil {
