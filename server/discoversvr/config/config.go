@@ -79,7 +79,7 @@ func init() {
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
 
 	// prometheus相关
-	flag.StringVar(&PrometheusPort, "prometheusPort", "2112", "The port to prometheus")
+	flag.StringVar(&PrometheusPort, "prometheusPort", "42112", "The port to prometheus")
 
 	// 解析命令行标志
 	flag.Parse()

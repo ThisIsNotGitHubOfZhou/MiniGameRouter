@@ -64,7 +64,7 @@ func (s *DiscoverService) DiscoverServiceWithName(name string) ([]*pb.ServiceInf
 }
 
 // convertMapToServiceInfo 将 map[string]string 转换为 *pb.ServiceInfo
-// 需要跟registersvr对齐~
+// NOTE:需要跟registersvr对齐~
 func convertMapToServiceInfo(data map[string]string) (*pb.ServiceInfo, error) {
 	weight, err := strconv.ParseInt(data["weight"], 10, 64)
 	if err != nil {

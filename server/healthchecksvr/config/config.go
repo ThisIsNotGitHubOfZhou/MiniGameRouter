@@ -2,12 +2,12 @@ package config
 
 import (
 	"flag"
+	kitlog "github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
+	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"os"
 	"time"
-
-	kitlog "github.com/go-kit/log"
 )
 
 // 定义两个全局变量，用于存储日志记录器
@@ -19,6 +19,10 @@ var (
 	HealthCheckGrpcHost string
 	HealthCheckGrpcPort string
 	IsK8s               bool
+
+	// prometheus指标
+	PrometheusPort    string
+	HealthCheckCTimes prometheus.Counter
 )
 
 // init 函数在包初始化时自动执行
@@ -42,6 +46,7 @@ func init() {
 	flag.StringVar(&HealthCheckGrpcPort, "port", "30001", "The port to healthcheck grpc")
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
 
+	flag.StringVar(&PrometheusPort, "prometheusPort", "32112", "The port to prometheus")
 	// 解析命令行标志
 	flag.Parse()
 
@@ -54,26 +59,23 @@ func init() {
 		PoolTimeout: 20 * time.Second,   //连接池等待时间
 	})
 
+	// prometheus监控
+	if !IsK8s {
+		HealthCheckCTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "healthcheck_from_client_times_" + HealthCheckGrpcPort,
+				Help: "Total times of healthcheck from client.",
+			},
+		)
+
+		prometheus.MustRegister(HealthCheckCTimes)
+
+	}
+
 }
 
 // TODO:引入下面的东西
 //var (
 //	Client       *redis.Client
 //	ZipkinTracer *zipkin.Tracer
-//)
-
-// promethues指标
-//var (
-//	RequestsVote = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "vote_times_" + ServicePortString,
-//			Help: "Total number of vote requests.",
-//		},
-//	)
-//	RequestsResult = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "result_times_" + ServicePortString,
-//			Help: "Total number of vote result requests.",
-//		},
-//	)
 //)

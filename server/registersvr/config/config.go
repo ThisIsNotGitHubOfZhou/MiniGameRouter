@@ -2,12 +2,12 @@ package config
 
 import (
 	"flag"
+	kitlog "github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
+	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"os"
 	"time"
-
-	kitlog "github.com/go-kit/log"
 )
 
 // 定义两个全局变量，用于存储日志记录器
@@ -19,6 +19,11 @@ var (
 	RegisterGrpcHost string
 	RegisterGrpcPort string
 	IsK8s            bool
+
+	// prometheus指标
+	PrometheusPort  string
+	RegisterTimes   prometheus.Counter
+	DeRegisterTimes prometheus.Counter
 )
 
 // init 函数在包初始化时自动执行
@@ -42,6 +47,7 @@ func init() {
 	flag.StringVar(&RegisterGrpcPort, "port", "20001", "The port to register grpc")
 	flag.BoolVar(&IsK8s, "k8s", false, "Is running in Kubernetes")
 
+	flag.StringVar(&PrometheusPort, "prometheusPort", "22112", "The port to prometheus")
 	// 解析命令行标志
 	flag.Parse()
 
@@ -54,26 +60,29 @@ func init() {
 		PoolTimeout: 20 * time.Second,   //连接池等待时间
 	})
 
+	if !IsK8s {
+		RegisterTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "deregister_times_" + RegisterGrpcPort,
+				Help: "Total times of register from client.",
+			},
+		)
+		RegisterTimes = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "deregister_times_" + RegisterGrpcPort,
+				Help: "Total times of deregister from client.",
+			},
+		)
+
+		prometheus.MustRegister(RegisterTimes)
+		prometheus.MustRegister(DeRegisterTimes)
+
+	}
+
 }
 
 // TODO:引入下面的东西
 //var (
 //	Client       *redis.Client
 //	ZipkinTracer *zipkin.Tracer
-//)
-
-// promethues指标
-//var (
-//	RequestsVote = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "vote_times_" + ServicePortString,
-//			Help: "Total number of vote requests.",
-//		},
-//	)
-//	RequestsResult = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "result_times_" + ServicePortString,
-//			Help: "Total number of vote result requests.",
-//		},
-//	)
 //)

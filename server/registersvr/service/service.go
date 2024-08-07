@@ -26,8 +26,10 @@ var _ Service = (*RegisterService)(nil)
 
 // TODO：200ms一次？需要优化一下？？
 func (s *RegisterService) Register(name, host, port, protocol, metadata string, weight, timeout int) (string, error) {
-
-	// TODO:需要跟discoversvr.convertMapToServiceInfo对齐~
+	if !config.IsK8s {
+		config.RegisterTimes.Inc()
+	}
+	// Note:需要跟discoversvr.convertMapToServiceInfo对齐~
 	instanceInfo := map[string]interface{}{
 		"service_name": name,
 		"instance_id":  generateInstanceID(name, host, port),
@@ -68,6 +70,9 @@ func generateInstanceID(name, host, port string) string {
 
 func (s *RegisterService) Deregister(id, name, host, port string) error {
 	config.Logger.Printf("[Info][register] 删除实例,名称：%v，id：%v\n", name, id)
+	if !config.IsK8s {
+		config.DeRegisterTimes.Inc()
+	}
 	if id != generateInstanceID(name, host, port) {
 		config.Logger.Printf("[Error][register] 服务实例ID: %v与生成不一样：%v\n", id, generateInstanceID(name, host, port))
 		return fmt.Errorf("服务实例ID: %v与生成不一样：%v", id, generateInstanceID(name, host, port))

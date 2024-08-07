@@ -63,6 +63,9 @@ func healthCheck(Url string) bool {
 
 func (s *HealthCheckService) HealthCheckC(id, name, host, port string, second int) error {
 	config.Logger.Printf("[Info][healthcheck] HealthCheckC客户端主动发送,id:%v,name:%v,时长:%v\n", id, name, second)
+	if !config.IsK8s {
+		config.HealthCheckCTimes.Inc()
+	}
 	go database.RenewServiceInstance(config.RedisClient, id, time.Duration(second)*3*time.Second+5*time.Second)
 	return nil
 }
