@@ -40,7 +40,7 @@ func (mw *loggingMiddleware) Register(name, host, port, protocol, metadata strin
 	return
 }
 
-func (mw loggingMiddleware) Deregister(id, name, host, port string) (err error) {
+func (mw *loggingMiddleware) Deregister(id, name, host, port string) (err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "Deregister",

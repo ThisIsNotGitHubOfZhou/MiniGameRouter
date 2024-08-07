@@ -16,7 +16,8 @@ type GrpcServer struct {
 	getRouteInfoWithName                  grpctransport.Handler
 	getRouteInfoWithPrefix                grpctransport.Handler
 	setRouteRule                          grpctransport.Handler
-	syncRoutesEndpoint                    grpctransport.Handler
+	syncRoutes                            grpctransport.Handler
+	updateRouteRule                       grpctransport.Handler
 	pb.UnimplementedDiscoverServiceServer // 嵌入未实现的服务，新版grpc需要
 }
 
@@ -52,10 +53,15 @@ func NewGRPCServer(edp endpoint.DiscoverEndpoint) *GrpcServer {
 			decodeGRPCSetRouteRuleRequest,
 			encodeGRPCSetRouteRuleResponse,
 		),
-		syncRoutesEndpoint: grpctransport.NewServer(
-			edp.SyncRoutesEndpoint,
+		syncRoutes: grpctransport.NewServer(
+			edp.SyncRoutes,
 			decodeGRPCSyncRoutesRequest,
 			encodeGRPCSyncRoutesResponse,
+		),
+		updateRouteRule: grpctransport.NewServer(
+			edp.UpdateRouteRule,
+			decodeGRPCUpdateRouteRuleRequest,
+			encodeGRPCUpdateRouteRuleResponse,
 		),
 	}
 }
@@ -258,7 +264,7 @@ func encodeGRPCSetRouteRuleResponse(_ context.Context, grpcResp interface{}) (in
 // 实现 gRPC 投票结果服务接口
 func (s *GrpcServer) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer) error {
 	ctx := context.WithValue(stream.Context(), "stream", stream)
-	_, _, err := s.syncRoutesEndpoint.ServeGRPC(ctx, nil)
+	_, _, err := s.syncRoutes.ServeGRPC(ctx, nil)
 	return err
 }
 
@@ -271,4 +277,44 @@ func decodeGRPCSyncRoutesRequest(_ context.Context, grpcReq interface{}) (interf
 // 响应编码器
 func encodeGRPCSyncRoutesResponse(_ context.Context, grpcResp interface{}) (interface{}, error) {
 	return grpcResp, nil
+}
+
+// 实现 gRPC 投票结果服务接口
+func (s *GrpcServer) UpdateRouteRule(ctx context.Context, req *pb.UpdateRouteRuleRequest) (*pb.UpdateRouteRuleResponse, error) {
+	_, resp, err := s.updateRouteRule.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*pb.UpdateRouteRuleResponse), nil
+}
+
+// 请求解码器 rpc请求转换成endpoint层请求
+func decodeGRPCUpdateRouteRuleRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	res, ok := grpcReq.(*pb.UpdateRouteRuleRequest)
+
+	if !ok {
+		return nil, fmt.Errorf("decodeGRPCUpdateRouteRuleRequest invalid request type: %T", grpcReq)
+	}
+
+	req := endpoint.UpdateRouteRuleRequest{
+		Name:      res.Name,
+		Host:      res.Host,
+		Port:      res.Port,
+		Prefix:    res.Prefix,
+		RouteInfo: res.Route,
+	}
+
+	return req, nil
+}
+
+// 响应编码器
+func encodeGRPCUpdateRouteRuleResponse(_ context.Context, grpcResp interface{}) (interface{}, error) {
+	res, ok := grpcResp.(endpoint.UpdateRouteRuleResponse)
+	if !ok {
+		return nil, fmt.Errorf("encodeGRPCUpdateRouteRuleResponse invalid response type: %T", grpcResp)
+	}
+	if res.Error != nil {
+		return &pb.UpdateRouteRuleResponse{ErrorMes: res.Error.Error()}, res.Error
+	}
+	return &pb.UpdateRouteRuleResponse{}, nil
 }

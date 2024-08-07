@@ -36,7 +36,7 @@ func (mw *loggingMiddleware) HealthCheckS(Url string, id string, second int) (er
 	return
 }
 
-func (mw loggingMiddleware) HealthCheckC(id, name, host, port string, second int) (err error) {
+func (mw *loggingMiddleware) HealthCheckC(id, name, host, port string, second int) (err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "HealthCheckC",

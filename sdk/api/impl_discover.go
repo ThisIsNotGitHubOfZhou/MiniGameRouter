@@ -385,6 +385,9 @@ func (c *MiniClient) SetRouteRule(ctx context.Context, info *discoverpb.RouteInf
 		//clientTracer,
 	).Endpoint()
 
+	// 添加超时机制
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	// 使用端点进行调用grpc
 	request := &discoverpb.RouteInfo{
 		Name:     info.Name,
@@ -572,4 +575,65 @@ func (c *MiniClient) SyncCache() error {
 
 	}
 	return nil
+}
+
+func (c *MiniClient) UpdateRouteRule(ctx context.Context, name, host, port, prefix string, info *discoverpb.RouteInfo) error {
+	fmt.Println("[Info][sdk] UpdateRouteRule，更新路由:", info)
+	// 轮询服务
+	c.discoverLock.Lock()
+	c.discoverFlag++
+	tempFlag := c.discoverFlag
+	c.discoverLock.Unlock()
+
+	if len(c.DiscoverGRPCPools) == 0 {
+		fmt.Println("[Error][sdk] DiscoverGRPCPools为空")
+		return fmt.Errorf("DiscoverGRPCPools empty")
+	}
+	conn, err := c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Get() // 优化后
+	defer c.DiscoverGRPCPools[tempFlag%(int64(len(c.DiscoverGRPCPools)))].Put(conn)
+	if err != nil {
+		return err
+	}
+
+	//clientTracer := kitzipkin.GRPCClientTrace(config.ZipkinTracer)
+
+	//// 使用 go-kit 的 gRPC 客户端传输层~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	var ep = grpctransport.NewClient(
+		conn,
+		"discover.DiscoverService", // 服务名称,注意前面要带包名！！！！！包名+在proto文件里定义的服务名
+		"UpdateRouteRule",          // 方法名称
+		encodeGRPCUpdateRouteRuleRequest,
+		decodeGRPCUpdateRouteRuleResponse,
+		discoverpb.UpdateRouteRuleResponse{},
+		//clientTracer,
+	).Endpoint()
+
+	// 使用端点进行调用grpc
+	request := &discoverpb.UpdateRouteRuleRequest{
+		Name:   name,
+		Host:   host,
+		Port:   port,
+		Prefix: prefix,
+		Route:  info,
+	}
+	response, err := ep(ctx, request)
+	if err != nil {
+		fmt.Println("[Error][sdk] UpdateRouteRule grpc error", err)
+		return err
+	}
+	r := response.(*discoverpb.UpdateRouteRuleResponse)
+
+	if r.ErrorMes != "" {
+		fmt.Println("[Info][sdk]  UpdateRouteRule error", r.ErrorMes)
+		return fmt.Errorf(r.ErrorMes)
+	}
+	return nil
+}
+func encodeGRPCUpdateRouteRuleRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*discoverpb.UpdateRouteRuleRequest)
+	return req, nil
+}
+func decodeGRPCUpdateRouteRuleResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*discoverpb.UpdateRouteRuleResponse)
+	return resp, nil
 }

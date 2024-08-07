@@ -36,7 +36,7 @@ func (mw *loggingMiddleware) DiscoverServiceWithName(name string) (res []*pb.Ser
 	return
 }
 
-func (mw loggingMiddleware) DiscoverServiceWithID(instanceID string) (res []*pb.ServiceInfo, err error) {
+func (mw *loggingMiddleware) DiscoverServiceWithID(instanceID string) (res []*pb.ServiceInfo, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "DiscoverServiceWithID",
@@ -48,7 +48,7 @@ func (mw loggingMiddleware) DiscoverServiceWithID(instanceID string) (res []*pb.
 	res, err = mw.Service.DiscoverServiceWithID(instanceID)
 	return
 }
-func (mw loggingMiddleware) GetRouteInfoWithName(name string) (res []*pb.RouteInfo, err error) {
+func (mw *loggingMiddleware) GetRouteInfoWithName(name string) (res []*pb.RouteInfo, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "DiscoverServiceWithID",
@@ -61,7 +61,7 @@ func (mw loggingMiddleware) GetRouteInfoWithName(name string) (res []*pb.RouteIn
 	return
 }
 
-func (mw loggingMiddleware) GetRouteInfoWithPrefix(name string, prefix string) (res []*pb.RouteInfo, err error) {
+func (mw *loggingMiddleware) GetRouteInfoWithPrefix(name string, prefix string) (res []*pb.RouteInfo, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "GetRouteInfoWithPrefix",
@@ -75,7 +75,7 @@ func (mw loggingMiddleware) GetRouteInfoWithPrefix(name string, prefix string) (
 	return
 }
 
-func (mw loggingMiddleware) SetRouteRule(info *pb.RouteInfo) (err error) {
+func (mw *loggingMiddleware) SetRouteRule(info *pb.RouteInfo) (err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"function", "SetRouteRule",
@@ -86,5 +86,20 @@ func (mw loggingMiddleware) SetRouteRule(info *pb.RouteInfo) (err error) {
 		)
 	}(time.Now())
 	err = mw.Service.SetRouteRule(info)
+	return
+}
+
+func (mw *loggingMiddleware) UpdateRouteRule(name, host, port, prefix string, routeInfo *pb.RouteInfo) (err error) {
+	defer func(begin time.Time) {
+		mw.logger.Log(
+			"function", "UpdateRouteInfo",
+			"name", name,
+			"host", host,
+			"port", port,
+			"prefix", prefix,
+			"took", time.Since(begin),
+		)
+	}(time.Now())
+	err = mw.Service.UpdateRouteRule(name, host, port, prefix, routeInfo)
 	return
 }

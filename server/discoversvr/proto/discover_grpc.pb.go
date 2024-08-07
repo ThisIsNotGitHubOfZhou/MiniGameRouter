@@ -25,6 +25,7 @@ const (
 	DiscoverService_GetRouteInfoWithPrefix_FullMethodName  = "/discover.DiscoverService/GetRouteInfoWithPrefix"
 	DiscoverService_SetRouteRule_FullMethodName            = "/discover.DiscoverService/SetRouteRule"
 	DiscoverService_SyncRoutes_FullMethodName              = "/discover.DiscoverService/SyncRoutes"
+	DiscoverService_UpdateRouteRule_FullMethodName         = "/discover.DiscoverService/UpdateRouteRule"
 )
 
 // DiscoverServiceClient is the client API for DiscoverService service.
@@ -37,6 +38,7 @@ type DiscoverServiceClient interface {
 	GetRouteInfoWithPrefix(ctx context.Context, in *GetRouteInfoWithPrefixRequest, opts ...grpc.CallOption) (*RouteInfosResponse, error)
 	SetRouteRule(ctx context.Context, in *RouteInfo, opts ...grpc.CallOption) (*SetRouteRuleResponse, error)
 	SyncRoutes(ctx context.Context, opts ...grpc.CallOption) (DiscoverService_SyncRoutesClient, error)
+	UpdateRouteRule(ctx context.Context, in *UpdateRouteRuleRequest, opts ...grpc.CallOption) (*UpdateRouteRuleResponse, error)
 }
 
 type discoverServiceClient struct {
@@ -129,6 +131,16 @@ func (x *discoverServiceSyncRoutesClient) Recv() (*RouteSyncResponse, error) {
 	return m, nil
 }
 
+func (c *discoverServiceClient) UpdateRouteRule(ctx context.Context, in *UpdateRouteRuleRequest, opts ...grpc.CallOption) (*UpdateRouteRuleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateRouteRuleResponse)
+	err := c.cc.Invoke(ctx, DiscoverService_UpdateRouteRule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DiscoverServiceServer is the server API for DiscoverService service.
 // All implementations must embed UnimplementedDiscoverServiceServer
 // for forward compatibility
@@ -139,6 +151,7 @@ type DiscoverServiceServer interface {
 	GetRouteInfoWithPrefix(context.Context, *GetRouteInfoWithPrefixRequest) (*RouteInfosResponse, error)
 	SetRouteRule(context.Context, *RouteInfo) (*SetRouteRuleResponse, error)
 	SyncRoutes(DiscoverService_SyncRoutesServer) error
+	UpdateRouteRule(context.Context, *UpdateRouteRuleRequest) (*UpdateRouteRuleResponse, error)
 	mustEmbedUnimplementedDiscoverServiceServer()
 }
 
@@ -163,6 +176,9 @@ func (UnimplementedDiscoverServiceServer) SetRouteRule(context.Context, *RouteIn
 }
 func (UnimplementedDiscoverServiceServer) SyncRoutes(DiscoverService_SyncRoutesServer) error {
 	return status.Errorf(codes.Unimplemented, "method SyncRoutes not implemented")
+}
+func (UnimplementedDiscoverServiceServer) UpdateRouteRule(context.Context, *UpdateRouteRuleRequest) (*UpdateRouteRuleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateRouteRule not implemented")
 }
 func (UnimplementedDiscoverServiceServer) mustEmbedUnimplementedDiscoverServiceServer() {}
 
@@ -293,6 +309,24 @@ func (x *discoverServiceSyncRoutesServer) Recv() (*RouteSyncRequest, error) {
 	return m, nil
 }
 
+func _DiscoverService_UpdateRouteRule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRouteRuleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiscoverServiceServer).UpdateRouteRule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiscoverService_UpdateRouteRule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiscoverServiceServer).UpdateRouteRule(ctx, req.(*UpdateRouteRuleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DiscoverService_ServiceDesc is the grpc.ServiceDesc for DiscoverService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -319,6 +353,10 @@ var DiscoverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRouteRule",
 			Handler:    _DiscoverService_SetRouteRule_Handler,
+		},
+		{
+			MethodName: "UpdateRouteRule",
+			Handler:    _DiscoverService_UpdateRouteRule_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

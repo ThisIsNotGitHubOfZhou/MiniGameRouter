@@ -69,13 +69,16 @@ func main() {
 
 	syncRoutesEnpt := endpoint.MakeSyncRoutesEndpoint(svc)
 
+	updateRouteRule := endpoint.MakeUpdateRouteRuleEndpoint(svc)
+
 	endpoints := endpoint.DiscoverEndpoint{
 		DiscoverServiceWithName: discoverSvcWithNameEnpt,
 		DiscoverServiceWithID:   discoverSvcWithIDEnpt,
 		GetRouteInfoWithName:    getRouteInfoWithNameEnpt,
 		GetRouteInfoWithPrefix:  getRouteInfoWithPrefixEnpt,
 		SetRouteRule:            setRouteRuleEnpt,
-		SyncRoutesEndpoint:      syncRoutesEnpt,
+		SyncRoutes:              syncRoutesEnpt,
+		UpdateRouteRule:         updateRouteRule,
 	}
 
 	// 定义transport层的trace

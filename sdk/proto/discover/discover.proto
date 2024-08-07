@@ -11,6 +11,7 @@ service DiscoverService {
   rpc GetRouteInfoWithPrefix (GetRouteInfoWithPrefixRequest) returns (RouteInfosResponse) {}
   rpc SetRouteRule (RouteInfo) returns (SetRouteRuleResponse) {}
   rpc SyncRoutes (stream RouteSyncRequest) returns (stream RouteSyncResponse);
+  rpc UpdateRouteRule (UpdateRouteRuleRequest) returns (UpdateRouteRuleResponse) {} // 目前是按照name+prefix来更新相关信息~
 }
 
 
@@ -61,7 +62,7 @@ message RouteInfo{
   string host = 2;
   string port = 3;
   string prefix = 4;
-  string metadata = 5;
+  string metadata = 5; // 包含weight、targeted等信息
 }
 
 message SetRouteRuleResponse{
@@ -72,7 +73,7 @@ message RouteSyncRequest {
   repeated string name = 1; // 需要同步的服务路由
   repeated string namePrefix = 2; // 需要同步的前缀+name路由（格式："{服务名}:{前缀}"）
   string last_sync_version = 3; // 客户端已知的最新版本号或时间戳
-  // 一定要同步的数据：(实现增量读~)
+  // 一定要同步的数据：
   repeated string nameNew = 4;
   repeated string namePrefixNew = 5;
 }
@@ -80,4 +81,16 @@ message RouteSyncRequest {
 message RouteSyncResponse {
   repeated RouteInfo routes = 1; // 增量更新的路由信息
   string new_version = 2; // 新的版本号或时间戳
+}
+
+message UpdateRouteRuleRequest{
+  string name = 1;
+  string host = 2;
+  string port = 3;
+  string prefix = 4;
+  RouteInfo route = 5;
+}
+
+message UpdateRouteRuleResponse{
+  string error_mes = 1;
 }
