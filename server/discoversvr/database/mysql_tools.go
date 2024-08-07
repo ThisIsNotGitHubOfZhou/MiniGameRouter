@@ -118,6 +118,38 @@ func writeToDB(dbID int, info *pb.RouteInfo) error {
 	return nil
 }
 
+func UpdateToMysql(name, prefix string, info *pb.RouteInfo) error {
+
+	// 根据shardingkey选择分片
+	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + hashStringToRange(prefix, intPow(2, config.PrefixSplitSize))
+	config.Logger.Printf("[Info][discover][mysql] UpdateToMysql Name: %v, Prefix: %v, DB_ID: %v\n",
+		name, prefix, strconv.FormatInt(int64(dbID), 2))
+	// 写入mysql
+	err := updateToMysql(dbID, name, prefix, info)
+	if err != nil {
+		config.Logger.Printf("[Error][discover][mysql] Failed to update to MySQL: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func updateToMysql(dbID int, name, prefix string, info *pb.RouteInfo) error {
+	tableName := fmt.Sprintf("route_info%d", dbID)
+	query := fmt.Sprintf("UPDATE %s SET name = ?, host = ?, port = ?, prefix = ?, metadata = ? WHERE name = ? AND prefix = ?", tableName)
+	//config.Logger.Printf("[Info][discover][mysql] 执行写入命令：%v\n", query)
+	if config.MysqlClient == nil {
+		config.Logger.Println("[Error][discover][mysql] db is nil")
+		return fmt.Errorf("db is nil")
+	}
+	_, err := config.MysqlClient.Exec(query, info.Name, info.Host, info.Port, info.Prefix, info.Metadata, name, prefix)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 更新数据错误:", err)
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return nil
+}
+
 // hashStringToRange hashes a string using SHA-256 and maps it to a specified range [0, maxRange-1]
 func hashStringToRange(s string, max int) int {
 

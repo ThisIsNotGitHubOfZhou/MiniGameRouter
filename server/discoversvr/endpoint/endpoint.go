@@ -15,7 +15,8 @@ type DiscoverEndpoint struct {
 	GetRouteInfoWithName    endpoint.Endpoint
 	GetRouteInfoWithPrefix  endpoint.Endpoint
 	SetRouteRule            endpoint.Endpoint
-	SyncRoutesEndpoint      endpoint.Endpoint
+	SyncRoutes              endpoint.Endpoint
+	UpdateRouteRule         endpoint.Endpoint
 }
 
 // 定义服务的请求和返回
@@ -157,5 +158,28 @@ func MakeSyncRoutesEndpoint(svc service.Service) endpoint.Endpoint {
 			return nil, fmt.Errorf("stream not found in context")
 		}
 		return nil, svc.SyncRoutes(stream)
+	}
+}
+
+type UpdateRouteRuleRequest struct {
+	Name      string        `json:"name"`
+	Host      string        `json:"host"`
+	Port      string        `json:"port"`
+	Prefix    string        `json:"prefix"`
+	RouteInfo *pb.RouteInfo `json:"route_info"`
+}
+type UpdateRouteRuleResponse struct {
+	Error error `json:"error"`
+}
+
+func MakeUpdateRouteRuleEndpoint(svc service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		// 请求转换成endpoint层的请求
+		req_ := request.(UpdateRouteRuleRequest)
+
+		// 调用service层服务
+		err := svc.UpdateRouteRule(req_.Name, req_.Host, req_.Port, req_.Prefix, req_.RouteInfo)
+
+		return UpdateRouteRuleResponse{Error: err}, nil
 	}
 }

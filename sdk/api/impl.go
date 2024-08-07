@@ -133,6 +133,27 @@ func (c *MiniClient) InitConfig() error { // 初始化配置
 	return nil
 }
 
+// 返回本地缓存所有路由条目
+func (c *MiniClient) CacheRouteNum() int {
+	res := 0
+	c.routeCacheMu.RLock()
+	defer c.routeCacheMu.RUnlock()
+	for _, v := range c.cache {
+		res += len(v)
+	}
+	return res
+}
+
+// 返回指定名称缓存条目
+func (c *MiniClient) CacheNameRouteNum(name string) int {
+	c.routeCacheMu.RLock()
+	defer c.routeCacheMu.RUnlock()
+	if routes, ok := c.cache[name]; ok {
+		return len(routes)
+	}
+	return 0
+}
+
 func (c *MiniClient) Close() {
 	// 退出反注册
 	ctx := context.Background()

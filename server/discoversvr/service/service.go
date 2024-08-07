@@ -28,6 +28,9 @@ type Service interface {
 
 	// 同步路由
 	SyncRoutes(stream pb.DiscoverService_SyncRoutesServer) error
+
+	// 更新路由信息
+	UpdateRouteRule(name, host, port, prefix string, routeInfo *pb.RouteInfo) error
 }
 
 // 定义中间键服务
@@ -156,6 +159,12 @@ func (s *DiscoverService) SyncRoutes(stream pb.DiscoverService_SyncRoutesServer)
 			return stream.Context().Err()
 		}
 	}
+}
+
+func (s *DiscoverService) UpdateRouteRule(name, host, port, prefix string, routeInfo *pb.RouteInfo) error {
+	config.Logger.Println("[Info][discover] UpdateRouteRule begin")
+
+	return database.UpdateToMysql(name, prefix, routeInfo)
 }
 
 //func (s *DiscoverService) SyncRoutes(req *pb.RouteSyncRequest, stream pb.DiscoverService_SyncRoutesServer) error {

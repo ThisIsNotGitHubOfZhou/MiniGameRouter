@@ -20,4 +20,7 @@ type DiscoverService interface {
 
 	// 前缀路由(prefix)or定向路由(metadata)
 	SetRouteRule(ctx context.Context, info *discoverpb.RouteInfo) error
+
+	// 前缀路由(prefix)or定向路由(metadata)
+	UpdateRouteRule(ctx context.Context, name, host, port, prefix string, info *discoverpb.RouteInfo) error
 }

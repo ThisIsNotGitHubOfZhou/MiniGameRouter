@@ -35,6 +35,28 @@ var (
 	IsK8s            bool
 )
 
+// TODO:引入下面的东西
+//var (
+//	Client       *redis.Client
+//	ZipkinTracer *zipkin.Tracer
+//)
+
+// promethues指标
+//var (
+//	RequestsVote = prometheus.NewCounter(
+//		prometheus.CounterOpts{
+//			Name: "vote_times_" + ServicePortString,
+//			Help: "Total number of vote requests.",
+//		},
+//	)
+//	RequestsResult = prometheus.NewCounter(
+//		prometheus.CounterOpts{
+//			Name: "result_times_" + ServicePortString,
+//			Help: "Total number of vote result requests.",
+//		},
+//	)
+//)
+
 // init 函数在包初始化时自动执行
 func init() {
 	// TODO:监控
@@ -99,25 +121,3 @@ func init() {
 	MysqlClient.SetConnMaxLifetime(30 * time.Minute) // 设置连接的最大生命周期
 
 }
-
-// TODO:引入下面的东西
-//var (
-//	Client       *redis.Client
-//	ZipkinTracer *zipkin.Tracer
-//)
-
-// promethues指标
-//var (
-//	RequestsVote = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "vote_times_" + ServicePortString,
-//			Help: "Total number of vote requests.",
-//		},
-//	)
-//	RequestsResult = prometheus.NewCounter(
-//		prometheus.CounterOpts{
-//			Name: "result_times_" + ServicePortString,
-//			Help: "Total number of vote result requests.",
-//		},
-//	)
-//)
