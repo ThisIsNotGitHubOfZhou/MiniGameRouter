@@ -129,8 +129,8 @@ func decodeGRPCDiscoverServiceWithIDResponse(_ context.Context, response interfa
 
 // 从cache里面读取数据
 func (c *MiniClient) getRouteWithNameFromCache(name string) []*discoverpb.RouteInfo {
-	c.routeCacheMu.RLock()
-	defer c.routeCacheMu.RUnlock()
+	c.routeCacheMu.Lock()
+	defer c.routeCacheMu.Unlock()
 	if c.cache != nil {
 		routes, ok := c.cache[name]
 		c.cacheTime[name] = time.Now()
