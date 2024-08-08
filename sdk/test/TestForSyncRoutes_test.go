@@ -30,7 +30,7 @@ func TestSyncRoutesFunction(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	// 设置一条路由，这时候缓存里应该啥也没有
 	err = client.SetRouteRule(ctx, &discoverpb.RouteInfo{
-		Name:     "test",
+		Name:     "test8_8_1",
 		Host:     "localhost",
 		Port:     "2222",
 		Prefix:   "/test",
@@ -44,7 +44,7 @@ func TestSyncRoutesFunction(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	// 这时候应该会存到缓存
 	//client.DiscoverServiceWithName(ctx, "test")
-	routes, err := client.GetRouteInfoWithName(ctx, "test")
+	routes, err := client.GetRouteInfoWithName(ctx, "test8_8_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestSyncRoutesFunction(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	err = client.SetRouteRule(ctx, &discoverpb.RouteInfo{
-		Name:     "test",
+		Name:     "test8_8_1",
 		Host:     "localhost",
 		Port:     "3333",
 		Prefix:   "/test",

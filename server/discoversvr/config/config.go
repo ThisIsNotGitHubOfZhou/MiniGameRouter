@@ -2,12 +2,14 @@ package config
 
 import (
 	"database/sql"
+	"discoversvr/tools/rabbitmq"
 	"flag"
 	"fmt"
 	kitlog "github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/streadway/amqp"
 	"log"
 	"os"
 	"time"
@@ -40,6 +42,12 @@ var (
 	ReadRouteTotalTimes     prometheus.Counter
 	ReadRouteFromMysqlTimes prometheus.Counter
 	ReadRouteFromRedisTimes prometheus.Counter
+
+	// 消息队列
+	RabbitMQURI  string
+	RabbitMQExch string
+	Consumer     *rabbitmq.RabbitMQ
+	Producer     *rabbitmq.RabbitMQ
 )
 
 // TODO:引入下面的东西
@@ -136,6 +144,44 @@ func init() {
 		prometheus.MustRegister(ReadRouteFromMysqlTimes)
 		prometheus.MustRegister(ReadRouteFromRedisTimes)
 		prometheus.MustRegister(ReadRouteTotalTimes)
+	}
+
+	// rabbitmq消息队列
+	RabbitMQURI = "amqp://thisiszhou:thisiszhou@9.135.95.71:5672/"
+	conn, err := amqp.Dial(RabbitMQURI)
+	if err != nil {
+		Logger.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		Logger.Fatalf("Failed to open a channel: %v", err)
+	}
+	defer ch.Close()
+
+	// 声明交换机
+	err = ch.ExchangeDeclare(
+		"route_logs", // name
+		"fanout",     // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
+	)
+	if err != nil {
+		Logger.Fatalf("Failed to declare an exchange: %v", err)
+	}
+	RabbitMQExch = "route_logs"
+
+	Consumer, err = rabbitmq.New(RabbitMQURI)
+	if err != nil {
+		Logger.Fatalf("[Error][discover]Failed to init rabbitmq consumer: %v", err)
+	}
+	Producer, err = rabbitmq.New(RabbitMQURI)
+	if err != nil {
+		Logger.Fatalf("[Error][discover]Failed to init rabbitmq consumer: %v", err)
 	}
 
 }

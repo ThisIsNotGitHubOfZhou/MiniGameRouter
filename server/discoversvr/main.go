@@ -106,8 +106,10 @@ func main() {
 
 	}()
 
-	// 启动同步线程：定时从mysql里面读取最新信息（从消息队列里读取）
-	go database.LoopRefreshSvrCache(config.SyncRedisClient)
+	// 启动同步线程：定时从mysql里面读取最新信息
+	//go database.LoopRefreshSvrCache(config.SyncRedisClient) // 定时读取
+	// 从消息队列读取信息
+	go database.ListToMQ()
 
 	// TODO:pprof
 	// 启动 pprof 服务器

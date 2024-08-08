@@ -32,8 +32,7 @@ func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~cache相关~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 写一份cache到redis，带时间戳的，读取的时候写入
-
+// 写一份cache到redis，带时间戳的，读取的时候写入，并加上过期
 func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 	ctx := context.Background() // 创建一个上下文
 	startTime := time.Now()     // 记录开始时间
@@ -49,6 +48,7 @@ func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 		cacheInfo["metadata"] = route.Metadata
 
 		// 将cacheInfo写入cache，并设置一个小时的过期时间
+		// NOTE:格式： {host}-{port}:{serviceName}:{prefix}
 		var key string
 		if route.Prefix != "" {
 			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
@@ -129,7 +129,7 @@ func LoopRefreshSvrCache(client *redis.Client) {
 			config.Logger.Println("[Error][discover][redis]Failed to get keys from Redis: %v\n", err)
 			return
 		}
-		config.Logger.Println("[Info][discover][redis]   LoopRefreshSvrCahce keys:", keys)
+		config.Logger.Println("[Info][discover][redis]   LoopRefreshSvrCahce keysNum:", len(keys))
 		for _, key := range keys {
 			// 确定是那种类型的
 			parts := strings.Split(key, ":")
@@ -150,9 +150,57 @@ func LoopRefreshSvrCache(client *redis.Client) {
 
 		time.Sleep(2 * time.Second) // TODO：配置化
 	}
-
 }
 
+// 检查redis里面是否需要更新，有这条数据相关的数据，有则更新(检查是否是热点数据)
+func CheckAndUpdate(client *redis.Client, route *pb.RouteInfo) {
+	name := route.Name
+	// TODO：检查redis里面是否有这个键，有则更新，但不更新
+	keys, err := client.Keys(ctx, "*"+name+"*").Result()
+	if err != nil {
+		config.Logger.Println("[Error][discover][redis] CheckAndUpdate Failed to get keys from Redis: %v\n", err)
+		return
+	}
+	if len(keys) != 0 { // 如果存在相关的热点数据
+		// 将route写进redis
+		ctx := context.Background() // 创建一个上下文
+		cacheInfo := make(map[string]string)
+		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
+		cacheInfo["name"] = route.Name
+		cacheInfo["host"] = route.Host
+		cacheInfo["port"] = route.Port
+		cacheInfo["prefix"] = route.Prefix
+		cacheInfo["metadata"] = route.Metadata
+
+		// 将cacheInfo写入cache，并设置一个小时的过期时间
+		// NOTE:格式： {host}-{port}:{serviceName}:{prefix}
+		var key string
+		if route.Prefix != "" {
+			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
+		} else {
+			key = route.Host + "-" + route.Port + ":" + route.Name
+		}
+
+		// 使用 HMSet 写入哈希表
+		err := client.HMSet(ctx, key, cacheInfo).Err()
+		if err != nil {
+			// 处理错误
+			config.Logger.Printf("[Error][discover][reds] CheckAndUpdate Failed to write to Redis: %v\n", err)
+			return
+		}
+
+		// 设置过期时间为1小时
+		// TODO:配置化
+		err = client.Expire(ctx, key, time.Hour).Err()
+		if err != nil {
+			// 处理错误
+			config.Logger.Printf("[Error][discover][reds] CheckAndUpdate Failed to set expiration for key %s: %v\n", key, err)
+			return
+		}
+	}
+}
+
+// 读需要同步的信息~
 func SyncRoutesWithRouteSyncRequest(client *redis.Client, req *pb.RouteSyncRequest) []*pb.RouteInfo {
 	res := make([]*pb.RouteInfo, 0)
 	// name、namePrefix需要比reqTime晚~

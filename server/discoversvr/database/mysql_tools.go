@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"discoversvr/config"
 	pb "discoversvr/proto"
+	"discoversvr/tools/convert"
 	"encoding/binary"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -93,15 +94,23 @@ func WriteToMysql(info *pb.RouteInfo) error {
 		config.Logger.Printf("[Error][discover][mysql] Failed to write to MySQL: %v\n", err)
 		return err
 	}
+
+	// 推入消息队列
+	str, err := convert.RouteInfoToByte(info)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 转换失败:", err)
+		return err
+	}
+	err = config.Producer.Publish(config.RabbitMQExch, str)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 发布失败:", err)
+		return err
+	}
 	return nil
 }
 
 // writeToDB writes RouteInfo to the specified database shard
 func writeToDB(dbID int, info *pb.RouteInfo) error {
-	//db, ok := dbPools[dbID]
-	//if !ok {
-	//	return fmt.Errorf("no database found for dbID %d", dbID)
-	//}
 
 	tableName := fmt.Sprintf("route_info%d", dbID)
 	query := fmt.Sprintf("INSERT INTO %s (name, host, port, prefix, metadata) VALUES (?, ?, ?, ?, ?)", tableName)
@@ -114,12 +123,10 @@ func writeToDB(dbID int, info *pb.RouteInfo) error {
 		config.Logger.Println("[Error][discover][mysql] 插入数据错误:", err)
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
-
 	return nil
 }
 
 func UpdateToMysql(name, prefix string, info *pb.RouteInfo) error {
-
 	// 根据shardingkey选择分片
 	dbID := hashStringToRange(name, intPow(2, config.NameSplitSize))<<config.PrefixSplitSize + hashStringToRange(prefix, intPow(2, config.PrefixSplitSize))
 	config.Logger.Printf("[Info][discover][mysql] UpdateToMysql Name: %v, Prefix: %v, DB_ID: %v\n",
@@ -128,6 +135,18 @@ func UpdateToMysql(name, prefix string, info *pb.RouteInfo) error {
 	err := updateToMysql(dbID, name, prefix, info)
 	if err != nil {
 		config.Logger.Printf("[Error][discover][mysql] Failed to update to MySQL: %v\n", err)
+		return err
+	}
+
+	// 推入消息队列
+	str, err := convert.RouteInfoToByte(info)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 转换失败:", err)
+		return err
+	}
+	err = config.Producer.Publish(config.RabbitMQExch, str)
+	if err != nil {
+		config.Logger.Println("[Error][discover][mysql] 发布失败:", err)
 		return err
 	}
 	return nil

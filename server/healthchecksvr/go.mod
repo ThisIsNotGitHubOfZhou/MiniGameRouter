@@ -6,8 +6,18 @@ require (
 	github.com/go-kit/kit v0.13.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/prometheus/client_golang v1.11.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
+)
+
+require (
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/common v0.30.0 // indirect
+	github.com/prometheus/procfs v0.7.3 // indirect
 )
 
 require (

@@ -63,11 +63,11 @@ func init() {
 	if !IsK8s {
 		RegisterTimes = prometheus.NewCounter(
 			prometheus.CounterOpts{
-				Name: "deregister_times_" + RegisterGrpcPort,
+				Name: "register_times_" + RegisterGrpcPort,
 				Help: "Total times of register from client.",
 			},
 		)
-		RegisterTimes = prometheus.NewCounter(
+		DeRegisterTimes = prometheus.NewCounter(
 			prometheus.CounterOpts{
 				Name: "deregister_times_" + RegisterGrpcPort,
 				Help: "Total times of deregister from client.",
