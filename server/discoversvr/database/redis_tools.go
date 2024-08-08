@@ -161,7 +161,7 @@ func CheckAndUpdate(client *redis.Client, route *pb.RouteInfo) {
 		config.Logger.Println("[Error][discover][redis] CheckAndUpdate Failed to get keys from Redis: %v\n", err)
 		return
 	}
-	if len(keys) != 0 {
+	if len(keys) != 0 { // 如果存在相关的热点数据
 		// 将route写进redis
 		ctx := context.Background() // 创建一个上下文
 		cacheInfo := make(map[string]string)

@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-// TODO:利用redis的Subscribe、Publish来让客户端缓存快速感知~
+// 利用队列来快速感知数据库的变化
 func ListToMQ() {
 
 	err := config.Consumer.Bind(config.RabbitMQExch)
