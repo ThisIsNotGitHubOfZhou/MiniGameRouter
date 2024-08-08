@@ -33,57 +33,11 @@ func DiscoverServices(client *redis.Client, pattern string) ([]map[string]string
 
 // ~~~~~~~~~~~~~~~~~~~~cache相关~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 写一份cache到redis，带时间戳的，读取的时候写入，并加上过期
-func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
-	ctx := context.Background() // 创建一个上下文
-	startTime := time.Now()     // 记录开始时间
-
-	//config.Logger.Printf("[Info][discover][redis] WriteSyncRoutes len: %v\n", len(routes))
-	for _, route := range routes {
-		cacheInfo := make(map[string]string)
-		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
-		cacheInfo["name"] = route.Name
-		cacheInfo["host"] = route.Host
-		cacheInfo["port"] = route.Port
-		cacheInfo["prefix"] = route.Prefix
-		cacheInfo["metadata"] = route.Metadata
-
-		// 将cacheInfo写入cache，并设置一个小时的过期时间
-		// NOTE:格式： {host}-{port}:{serviceName}:{prefix}
-		var key string
-		if route.Prefix != "" {
-			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
-		} else {
-			key = route.Host + "-" + route.Port + ":" + route.Name
-		}
-
-		// 使用 HMSet 写入哈希表
-		err := client.HMSet(ctx, key, cacheInfo).Err()
-		if err != nil {
-			// 处理错误
-			config.Logger.Printf("[Error][discover][reds]Failed to write to Redis: %v\n", err)
-			continue
-		}
-
-		// 设置过期时间为1小时
-		// TODO:配置化
-		err = client.Expire(ctx, key, time.Hour).Err()
-		if err != nil {
-			// 处理错误
-			config.Logger.Printf("[Error][discover][reds]Failed to set expiration for key %s: %v\n", key, err)
-		}
-	}
-	elapsedTime := time.Since(startTime) // 计算耗时
-	config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~WriteSyncRoutes耗时: %v\n", elapsedTime)
-}
-
-// NOTE：!!!!!!!!!!超级大优化！！！！！！！！！
 //func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 //	ctx := context.Background() // 创建一个上下文
 //	startTime := time.Now()     // 记录开始时间
 //
-//	// 使用管道批量执行 Redis 命令
-//	pipe := client.Pipeline()
-//
+//	//config.Logger.Printf("[Info][discover][redis] WriteSyncRoutes len: %v\n", len(routes))
 //	for _, route := range routes {
 //		cacheInfo := make(map[string]string)
 //		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
@@ -93,7 +47,8 @@ func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 //		cacheInfo["prefix"] = route.Prefix
 //		cacheInfo["metadata"] = route.Metadata
 //
-//		// 生成 Redis 键
+//		// 将cacheInfo写入cache，并设置一个小时的过期时间
+//		// NOTE:格式： {host}-{port}:{serviceName}:{prefix}
 //		var key string
 //		if route.Prefix != "" {
 //			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
@@ -102,21 +57,67 @@ func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
 //		}
 //
 //		// 使用 HMSet 写入哈希表
-//		pipe.HMSet(ctx, key, cacheInfo)
+//		err := client.HMSet(ctx, key, cacheInfo).Err()
+//		if err != nil {
+//			// 处理错误
+//			config.Logger.Printf("[Error][discover][reds]Failed to write to Redis: %v\n", err)
+//			continue
+//		}
 //
 //		// 设置过期时间为1小时
-//		pipe.Expire(ctx, key, time.Hour)
+//		// TODO:配置化
+//		err = client.Expire(ctx, key, time.Hour).Err()
+//		if err != nil {
+//			// 处理错误
+//			config.Logger.Printf("[Error][discover][reds]Failed to set expiration for key %s: %v\n", key, err)
+//		}
 //	}
-//
-//	// 执行管道中的命令
-//	_, err := pipe.Exec(ctx)
-//	if err != nil {
-//		config.Logger.Printf("[Error][discover][redis] Failed to execute pipeline: %v\n", err)
-//	}
-//
 //	elapsedTime := time.Since(startTime) // 计算耗时
 //	config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~WriteSyncRoutes耗时: %v\n", elapsedTime)
 //}
+
+// NOTE：!!!!!!!!!!超级大优化！！！！！！！！！
+func WriteSyncRoutes(client *redis.Client, routes []*pb.RouteInfo) {
+	ctx := context.Background() // 创建一个上下文
+	startTime := time.Now()     // 记录开始时间
+
+	// 使用管道批量执行 Redis 命令
+	pipe := client.Pipeline()
+
+	for _, route := range routes {
+		cacheInfo := make(map[string]string)
+		cacheInfo["lastSyncVersion"] = time.Now().Format(time.RFC3339)
+		cacheInfo["name"] = route.Name
+		cacheInfo["host"] = route.Host
+		cacheInfo["port"] = route.Port
+		cacheInfo["prefix"] = route.Prefix
+		cacheInfo["metadata"] = route.Metadata
+
+		// 生成 Redis 键
+		// NOTE:格式： {host}-{port}:{serviceName}:{prefix}
+		var key string
+		if route.Prefix != "" {
+			key = route.Host + "-" + route.Port + ":" + route.Name + ":" + route.Prefix
+		} else {
+			key = route.Host + "-" + route.Port + ":" + route.Name
+		}
+
+		// 使用 HMSet 写入哈希表
+		pipe.HMSet(ctx, key, cacheInfo)
+
+		// 设置过期时间为1小时
+		pipe.Expire(ctx, key, time.Hour)
+	}
+
+	// 执行管道中的命令
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		config.Logger.Printf("[Error][discover][redis] Failed to execute pipeline: %v\n", err)
+	}
+
+	elapsedTime := time.Since(startTime) // 计算耗时
+	config.Logger.Printf("~~~~~~~~~~~~~~~~~~~~~~WriteSyncRoutes耗时: %v\n", elapsedTime)
+}
 
 // 定期从mysql里面读取新数据,强制刷新!!!!
 func LoopRefreshSvrCache(client *redis.Client) {

@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -111,20 +112,21 @@ func main() {
 	// 从消息队列读取信息
 	go database.ListToMQ()
 
-	// TODO:pprof
-	// 启动 pprof 服务器
-	// http.ListenAndServe("0.0.0.0:6060", nil)
-	//mux := http.NewServeMux()
-	//mux.HandleFunc("/debug/pprof/", pprof.Index)
-	//mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	//mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	//mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	//mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	//go func() { log.Fatal(http.ListenAndServe(config.PprofPort, mux)) }()
-
-	// 启动http服务暴露prometheus指标
-	// 启动一个 HTTP 服务器来暴露 Prometheus 指标
 	if !config.IsK8s {
+		// 启动 pprof 服务器/
+		mux := http.NewServeMux()
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		go func() {
+			config.Logger.Println("[Info][discover] pprof服务器启动:", config.PprofPort)
+			config.Logger.Fatal(http.ListenAndServe(":"+config.PprofPort, mux))
+		}()
+
+		// 启动http服务暴露prometheus指标
+		// 启动一个 HTTP 服务器来暴露 Prometheus 指标
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
 			err := http.ListenAndServe(":"+config.PrometheusPort, nil) // 2112 是常用的 Prometheus 端口

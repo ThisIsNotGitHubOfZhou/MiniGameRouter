@@ -48,6 +48,9 @@ var (
 	RabbitMQExch string
 	Consumer     *rabbitmq.RabbitMQ
 	Producer     *rabbitmq.RabbitMQ
+
+	// pprof相关
+	PprofPort string
 )
 
 // TODO:引入下面的东西
@@ -88,6 +91,9 @@ func init() {
 
 	// prometheus相关
 	flag.StringVar(&PrometheusPort, "prometheusPort", "42112", "The port to prometheus")
+
+	// pprof相关
+	flag.StringVar(&PprofPort, "pprofPort", "46060", "The port to pprof service")
 
 	// 解析命令行标志
 	flag.Parse()
