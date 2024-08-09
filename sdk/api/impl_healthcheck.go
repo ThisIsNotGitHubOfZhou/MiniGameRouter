@@ -72,7 +72,7 @@ func decodeGRPCHealthCheckSResponse(_ context.Context, response interface{}) (in
 	return resp, nil
 }
 
-func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string, timeout int) error {
+func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, host, port string, timeout int) error {
 	go func() {
 		ticker := time.NewTicker(3 * time.Duration(c.timeout) * time.Second)
 		defer ticker.Stop()
@@ -93,7 +93,7 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 
 				conn, err := c.HealthCheckGRPCPools[tempFlag%(int64(len(c.HealthCheckGRPCPools)))].Get()
 				if err != nil {
-					fmt.Println("[Error][sdk] gprc连接问题：", err)
+					fmt.Println("[Error][sdk] healthcheckc gprc连接问题：", err)
 					return
 				}
 
@@ -110,9 +110,9 @@ func (c *MiniClient) HealthCheckC(ctx context.Context, id, name, port, ip string
 				request := &healthcheckpb.HealthCheckCRequest{
 					Id:      id,
 					Name:    name,
-					Host:    c.host,
+					Host:    host,
 					Port:    port,
-					Timeout: int64(c.timeout),
+					Timeout: int64(timeout),
 				}
 				fmt.Println("[Info][sdk] healthcheckc 发送续约请求：", request)
 				response, err := ep(ctx, request)

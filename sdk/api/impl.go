@@ -63,7 +63,7 @@ var _ service.HealthCheckService = (*MiniClient)(nil)
 var _ service.RouteAlgorithm = (*MiniClient)(nil)
 
 func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout int) *MiniClient {
-	return &MiniClient{
+	cli := &MiniClient{
 		name:                name,
 		host:                host,
 		port:                port,
@@ -72,13 +72,39 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 		weight:              weight,
 		timeout:             timeout,
 		registerFlag:        0,
-		registerPoolSize:    500,
+		registerPoolSize:    50,
 		healthCheckFlag:     0,
-		healthCheckPoolSize: 500,
+		healthCheckPoolSize: 50,
 		discoverFlag:        0,
-		discoverPoolSize:    1000,
+		discoverPoolSize:    100,
 		lastUpdateTime:      "",
 	}
+
+	// TODO:后续改成sidecar模式~
+	cli.RegisterServerInfo = []string{"localhost:20001"}    //, "localhost:20002", "localhost:20003"
+	cli.HealthCheckServerInfo = []string{"localhost:30001"} //, "localhost:30002", "localhost:30003"
+	cli.DiscoverServerInfo = []string{"localhost:40001"}    //, "localhost:40002", "localhost:40003"
+
+	ctx := context.Background()
+	// 初始化配置
+	err := cli.InitConfig()
+	if err != nil {
+		fmt.Println("[Error][sdk] NewMiniClient初始化出错：", err)
+		return nil
+	}
+
+	// 完成注册&心跳检测
+	if cli.name != "" && cli.host != "" && cli.port != "" {
+		cli.id, err = cli.Register(ctx, cli.name, cli.host, cli.port, cli.protocol, cli.metadata, cli.weight, cli.timeout)
+		if err != nil {
+			fmt.Println("[Error][sdk] NewMiniClient Register失败：", err)
+		} else {
+			// 心跳检测
+			cli.HealthCheckC(ctx, cli.id, cli.name, cli.host, cli.port, cli.timeout)
+		}
+	}
+
+	return cli
 }
 
 func (c *MiniClient) InitConfig() error { // 初始化配置
@@ -158,7 +184,10 @@ func (c *MiniClient) CacheNameRouteNum(name string) int {
 func (c *MiniClient) Close() {
 	// 退出反注册
 	ctx := context.Background()
-	c.DeRegister(ctx, c.id, c.name, c.host, c.port)
+	err := c.DeRegister(ctx, c.id, c.name, c.host, c.port)
+	if err != nil {
+		fmt.Println("[Error][sdk] Close DeRegister失败：", err)
+	}
 	for i := 0; i < len(c.RegisterGRPCPools); i++ {
 		c.RegisterGRPCPools[i].Close()
 	}
