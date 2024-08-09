@@ -58,7 +58,6 @@ func (c *MiniClient) Register(ctx context.Context, name, host, port, protocol, m
 	r := response.(*registerpb.RegisterResponse)
 
 	fmt.Println("[Info][sdk]  register 结果", r)
-	c.id = r.Id
 	return r.Id, nil
 
 	// 原版grpc请求~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

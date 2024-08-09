@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	discoverpb "github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/proto/discover"
+	"github.com/ThisIsNotGitHubOfZhou/MiniGameRouter/sdk/service"
 	"github.com/stathat/consistent"
 	"math/rand"
 	"time"
@@ -14,8 +15,53 @@ func init() {
 	rand.Seed(time.Now().UnixNano()) // 在程序启动时设置随机数种子
 }
 
+// 通用路由
+func (mc *MiniClient) Routing(ctx context.Context, routeReq service.RouteRequest) (*discoverpb.RouteInfo, error) {
+	if routeReq.Name == "" {
+		return nil, fmt.Errorf("invalid routing target name")
+	}
+
+	var route []*discoverpb.RouteInfo
+	if routeReq.Prefix == "" {
+		var err error
+		route, err = mc.GetRouteInfoWithName(ctx, routeReq.Name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		route, err = mc.GetRouteInfoWithPrefix(ctx, routeReq.Name, routeReq.Prefix)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	switch routeReq.RouteType {
+	case service.ConsistentHashing:
+		return mc.ConsistentHashingRouting(ctx, route, routeReq.Name)
+	case service.Random:
+		return mc.RandomRouting(ctx, route)
+	case service.Weighted:
+		return mc.WeightedRouting(ctx, route)
+	case service.Targeted:
+		if routeReq.TargetedKey != "" {
+			return mc.TargetedRouting(ctx, route, routeReq.TargetedKey)
+		} else {
+			return nil, fmt.Errorf("invalid routing req TargetedKey: %v", routeReq.TargetedKey)
+		}
+	case service.Metadata:
+		if routeReq.MetaKey != "" && routeReq.MetaVal != "" {
+			return mc.MetadataRouting(ctx, route, routeReq.MetaKey, routeReq.MetaVal)
+		} else {
+			return nil, fmt.Errorf("invalid routing req metadata kv pair: %v,%v", routeReq.MetaKey, routeReq.MetaVal)
+		}
+	}
+
+	return nil, fmt.Errorf("invalid routing req: %v", routeReq.RouteType)
+}
+
 // 一致性哈希算法
-// key: 请求的某个标识符
+// key: 请求的某个标识符,建议用自己的name+ip+port
 // routes的name一定相同，host+port不一定相同
 // 避免每次都重新生成NeHashMap
 func (mc *MiniClient) ConsistentHashingRouting(ctx context.Context, routes []*discoverpb.RouteInfo, key string) (*discoverpb.RouteInfo, error) {
