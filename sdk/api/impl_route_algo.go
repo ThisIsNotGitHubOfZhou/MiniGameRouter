@@ -38,7 +38,7 @@ func (mc *MiniClient) Routing(ctx context.Context, routeReq service.RouteRequest
 
 	switch routeReq.RouteType {
 	case service.ConsistentHashing:
-		return mc.ConsistentHashingRouting(ctx, route, routeReq.Name)
+		return mc.ConsistentHashingRouting(ctx, route, mc.name+mc.host+mc.port)
 	case service.Random:
 		return mc.RandomRouting(ctx, route)
 	case service.Weighted:

@@ -108,8 +108,6 @@ func NewMiniClient(name, host, port, protocol, metadata string, weight, timeout 
 }
 
 func (c *MiniClient) InitConfig() error { // 初始化配置
-	// TODO:初始化server的IP:PORT
-
 	// 初始化Register连接池
 	// NOTE:注意RegisterServerInfo要被初始化！
 	if c.RegisterServerInfo == nil {
